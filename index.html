@@ -281,7 +281,7 @@
 
     .opcion-card {
       display: flex;
-      align-items: center;
+      align-items: stretch;
       gap: .85rem;
       padding: .9rem 1rem;
       border: 2px solid var(--border);
@@ -300,6 +300,8 @@
 
     .op-radio {
       width: 20px; height: 20px; flex-shrink: 0;
+      align-self: flex-start;
+      margin-top: .1rem;
       border-radius: 50%;
       border: 2px solid var(--border);
       display: flex; align-items: center; justify-content: center;
@@ -316,7 +318,7 @@
     }
     .opcion-card.selected .op-radio::after { opacity: 1; }
 
-    .op-color { width: 6px; height: 40px; border-radius: 3px; flex-shrink: 0; }
+    .op-color { width: 6px; border-radius: 3px; flex-shrink: 0; align-self: stretch; min-height: 40px; }
 
     .op-info { flex: 1; min-width: 0; }
     .op-nombre { font-weight: 700; font-size: .93rem; color: var(--navy); }
@@ -326,7 +328,8 @@
     .op-cap-row {
       display: flex;
       align-items: center;
-      gap: .5rem;
+      flex-wrap: wrap;
+      gap: .35rem .5rem;
       margin-top: .55rem;
     }
     .op-cap-nombre {
@@ -334,6 +337,7 @@
       font-size: 1.05rem;
       color: var(--navy);
       letter-spacing: .01em;
+      line-height: 1.25;
     }
     .op-cap-badge {
       font-size: .68rem;
@@ -345,6 +349,7 @@
       border-radius: 99px;
       padding: .18rem .6rem;
       flex-shrink: 0;
+      white-space: nowrap;
     }
     .op-cap-cargo { color: var(--corinto); font-weight: 700; }
     .op-cap-miembros {
