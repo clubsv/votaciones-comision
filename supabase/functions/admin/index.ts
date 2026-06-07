@@ -35,6 +35,7 @@ Deno.serve(async (req) => {
       case "saveBallot":    return json(await saveBallot(db, body));
       case "savePadron":    return json(await savePadron(db, body));
       case "getResults":    return json(await getResultsDetail(db));
+      case "resetResults":  return json(await resetResults(db));
       case "generateLinks": return json(await generateLinks(db, body));
       default:              return json({ error: "Acción no válida." }, 400);
     }
@@ -164,6 +165,15 @@ async function getResultsDetail(db: DB) {
   return { ...agregados, detalle };
 }
 
+// ── resetResults ── borra TODOS los votos (pone los resultados a cero) ──
+// vote_answers se borra en cascada (on delete cascade sobre votes).
+async function resetResults(db: DB) {
+  const { error } = await db.from("votes").delete()
+    .neq("id", "00000000-0000-0000-0000-000000000000"); // borra todas las filas
+  if (error) throw new Error("No se pudieron borrar los votos: " + error.message);
+  return { ok: true };
+}
+
 // ── generateLinks ── reemplaza gen_links.js ───────────────────
 async function generateLinks(db: DB, body: Body) {
   const base = String(body.baseUrl ?? "").replace(/[?#].*$/, "").replace(/\/$/, "");
@@ -175,7 +185,7 @@ async function generateLinks(db: DB, body: Body) {
   const links = (padron ?? []).map((p) => {
     const link = `${base}/?uid=${p.uid}`;
     const whatsapp =
-      `Estimado(a) socio(a),\n\n` +
+      `Estimado(a) miembro(a),\n\n` +
       `El *Club Salvadoreño* le invita a participar en la votación para la *${s.titulo}*.\n\n` +
       `Por favor emita su voto a través del siguiente enlace:\n${link}\n\n` +
       `_⚠️ Este enlace es de uso personal e intransferible, válido para un único voto. No lo comparta con otras personas._`;

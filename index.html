@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#003563">
+  <meta name="color-scheme" content="light">
   <meta name="description" content="Sistema de Votación Electrónica – Club Salvadoreño">
   <title>Votaciones – Club Salvadoreño</title>
   <script src="supabase-config.js"></script>
@@ -33,7 +34,7 @@
       --shadow-lg:0 8px 36px rgba(0,53,99,.22);
     }
 
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; color-scheme: light; }
 
     body {
       font-family: Arial, Helvetica, sans-serif;
@@ -292,9 +293,9 @@
     }
     .opcion-card:hover { border-color: var(--accent); background: #F8FBFF; }
     .opcion-card.selected {
-      border-color: var(--corinto);
-      background: var(--corinto-tint);
-      box-shadow: 0 0 0 3px rgba(117,42,7,.12);
+      border-color: var(--success);
+      background: #E9F7EC;
+      box-shadow: 0 0 0 3px rgba(46,125,50,.15);
     }
 
     .op-radio {
@@ -304,7 +305,7 @@
       display: flex; align-items: center; justify-content: center;
       transition: border-color .18s, background .18s;
     }
-    .opcion-card.selected .op-radio { border-color: var(--corinto); background: var(--corinto); }
+    .opcion-card.selected .op-radio { border-color: var(--success); background: var(--success); }
     .op-radio::after {
       content: '';
       width: 8px; height: 8px;
@@ -515,60 +516,7 @@
     @media (min-width: 600px) { .main { padding: 2.5rem 1.5rem; } }
     @media (min-width: 900px) { .main { padding: 3rem 2rem; align-items: center; } }
 
-    /* ── MODO OSCURO ── */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg:      #0F172A;
-        --surface: #1E293B;
-        --border:  #334155;
-        --text:    #E2E8F0;
-        --muted:   #94A3B8;
-        --accent:  #8AB6D6;
-        --corinto: #C77A4E;          /* corinto aclarado para fondo oscuro */
-        --corinto-tint: #2A2017;     /* fondo cálido oscuro */
-      }
-
-      /* Textos que usan --navy como color de letra (oscuro sobre fondo oscuro → ilegible).
-         Se igualan los selectores a la especificidad de las reglas base (.card h2, .modal h3,
-         etc.) para que el override gane; antes h2/h3 perdían contra .card h2. */
-      .card h2, .modal h3, h4,
-      .pregunta-titulo,
-      .op-nombre, .op-cap-nombre,
-      .field label, .btn-ghost,
-      .prog-label, .stat-value,
-      .voto-resumen h4, .voto-resumen-val,
-      .modal-item-value { color: var(--text); }
-
-      /* Spinner y hover del botón fantasma sobre fondo oscuro */
-      .spinner { border-top-color: var(--accent); }
-      .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-
-      /* Franjas de acento (navy casi invisible sobre fondo oscuro) */
-      .voto-resumen-val, .modal-item-value { border-left-color: var(--accent); }
-
-      /* Tarjeta hover y seleccionada: fondo claro hardcodeado → reemplazar */
-      .opcion-card:hover  { background: #1E3A5F; border-color: var(--accent); }
-      .opcion-card.selected {
-        background: var(--corinto-tint);
-        border-color: var(--corinto);
-        box-shadow: 0 0 0 3px rgba(199,122,78,.25);
-      }
-      .opcion-card.selected .op-radio  { border-color: var(--corinto); background: var(--corinto); }
-      .opcion-card.selected .op-nombre { color: #fff; }
-      .opcion-card.selected .op-cap-nombre { color: #fff; }
-      .opcion-card.selected .op-cap-miembro { color: #CBD5E1; }
-
-      /* Input */
-      .field input {
-        background: #0F172A;
-        color: var(--text);
-        border-color: var(--border);
-      }
-      .field input::placeholder { color: #475569; }
-
-      /* Alerta de error */
-      .alert-err { background: #3B1010; border-color: #C62828; color: #FCA5A5; }
-    }
+    /* Modo oscuro deshabilitado: la app siempre se muestra en modo claro. */
   </style>
 </head>
 <body>
@@ -793,7 +741,7 @@ function aplicarConfig() {
   document.title = titulo + ' – Club Salvadoreño';
   set('hdr-title', titulo);
   set('inicio-sub', el.descripcion || el.description ||
-    'Ingrese su número de socio para acceder al proceso de votación.');
+    'Ingrese su número de miembro para acceder al proceso de votación.');
   set('votacion-sub', el.descripcion || el.description || '');
 
   if (el.modoDemo || el.demoMode) {

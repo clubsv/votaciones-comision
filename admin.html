@@ -181,14 +181,14 @@
         </div>
         <div id="import-box" style="display:none;margin-bottom:1rem">
           <div class="field">
-            <label>Pegar lista (una persona por línea: <span class="mono">nombre [tab/coma] número de socio</span>). Se genera un UID automáticamente.</label>
+            <label>Pegar lista (una persona por línea: <span class="mono">nombre [tab/coma] número de miembro</span>). Se genera un UID automáticamente.</label>
             <textarea id="import-text" placeholder="JUAN PEREZ, 12345&#10;MARIA LOPEZ, 67890"></textarea>
           </div>
           <button class="btn btn-corinto btn-sm" onclick="procesarImport()">Agregar al padrón</button>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th style="width:130px">UID</th><th>Nombre</th><th style="width:120px">N° socio</th><th style="width:48px"></th></tr></thead>
+            <thead><tr><th style="width:130px">UID</th><th>Nombre</th><th style="width:120px">N° miembro</th><th style="width:48px"></th></tr></thead>
             <tbody id="padron-body"></tbody>
           </table>
         </div>
@@ -213,7 +213,10 @@
       <div class="card">
         <h3>Resultados y participación</h3>
         <p class="hint">Detalle auditable de los votos registrados.</p>
-        <button class="btn btn-primary btn-sm" onclick="cargarResultados()">Actualizar resultados</button>
+        <div class="inline">
+          <button class="btn btn-primary btn-sm" onclick="cargarResultados()">Actualizar resultados</button>
+          <button class="btn btn-danger btn-sm" onclick="resetearResultados()">Poner resultados a cero</button>
+        </div>
         <div id="resultados-cont" style="margin-top:1.2rem"></div>
       </div>
     </div>
@@ -541,8 +544,16 @@ async function generarLinks() {
   cont.innerHTML = '<div class="loading"><div class="spinner"></div>Generando…</div>';
   const baseUrl = document.getElementById('links-base').value.trim();
   const r = await adminAPI('generateLinks', { baseUrl });
+  if (r._unauth) { logout(); return; }
   if (r.error) { cont.innerHTML = ''; return toast(r.error, true); }
-  let html = `<p class="hint">${r.links.length} links generados.</p><div class="table-wrap"><table><thead><tr><th>N° socio</th><th>Nombre</th><th>Link</th><th style="width:90px">WhatsApp</th></tr></thead><tbody>`;
+  window._allLinks = r.links.map(l => l.link);
+  window._allWa = r.links.map(l => l.whatsapp);
+  let html = `<div class="inline" style="margin-bottom:1rem">
+      <p class="hint" style="margin:0;flex:1">${r.links.length} links generados.</p>
+      <button class="btn btn-ghost btn-sm" onclick="copiarTodosLinks()">Copiar todos los links</button>
+      <button class="btn btn-ghost btn-sm" onclick="copiarTodosWa()">Copiar todos los mensajes</button>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>N° miembro</th><th>Nombre</th><th>Link</th><th style="width:90px">WhatsApp</th></tr></thead><tbody>`;
   r.links.forEach((l, i) => {
     window['_wa' + i] = l.whatsapp;
     html += `<tr><td>${esc(l.numero_socio || '—')}</td><td>${esc(l.nombre)}</td><td class="mono"><a href="${esc(l.link)}" target="_blank">${esc(l.link)}</a></td><td><button class="btn btn-ghost btn-sm" onclick="copiar(window._wa${i})">Copiar</button></td></tr>`;
@@ -551,6 +562,28 @@ async function generarLinks() {
   cont.innerHTML = html;
 }
 function copiar(txt) { navigator.clipboard.writeText(txt).then(() => toast('Mensaje copiado')); }
+function copiarTodosLinks() {
+  const txt = (window._allLinks || []).join('\n');
+  if (!txt) return toast('Genere los links primero', true);
+  navigator.clipboard.writeText(txt).then(() => toast(`${window._allLinks.length} links copiados`));
+}
+function copiarTodosWa() {
+  const txt = (window._allWa || []).join('\n\n──────────\n\n');
+  if (!txt) return toast('Genere los links primero', true);
+  navigator.clipboard.writeText(txt).then(() => toast(`${window._allWa.length} mensajes copiados`));
+}
+
+// ── Reset de resultados ────────────────────────────────────────
+async function resetearResultados() {
+  if (!confirm('⚠️ Esto BORRARÁ todos los votos registrados y pondrá los resultados a cero.\n\nEsta acción NO se puede deshacer. ¿Desea continuar?')) return;
+  const txt = prompt('Para confirmar, escriba en mayúsculas: BORRAR');
+  if (txt !== 'BORRAR') return toast('Cancelado — no se borró nada');
+  const r = await adminAPI('resetResults');
+  if (r._unauth) { logout(); return; }
+  if (r.error) return toast(r.error, true);
+  toast('Resultados puestos a cero');
+  cargarResultados();
+}
 
 // ── Utils ──────────────────────────────────────────────────────
 function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
