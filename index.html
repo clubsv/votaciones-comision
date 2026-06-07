@@ -840,8 +840,14 @@ function renderPreguntas() {
           .map(m => {
             const nombre = (m && typeof m === 'object') ? m.nombre : m;
             const cargo  = (m && typeof m === 'object') ? m.cargo  : null;
-            return `<div class="op-cap-miembro">${esc(nombre)}${
-              cargo ? ` <span class="op-cap-cargo">· ${esc(cargo)}</span>` : ''}</div>`;
+            // Miembro con cargo (ej. Capitana) se muestra igual que el capitán: nombre grande + badge
+            if (cargo) {
+              return `<div class="op-cap-row">
+                <span class="op-cap-nombre">${esc(nombre)}</span>
+                <span class="op-cap-badge">${esc(cargo)}</span>
+              </div>`;
+            }
+            return `<div class="op-cap-miembro">${esc(nombre)}</div>`;
           })
           .join('');
         const capHtml = op.capitan ? `

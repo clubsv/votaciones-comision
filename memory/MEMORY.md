@@ -1,0 +1,1 @@
+- [Email (Brevo)](email-brevo-setup.md) — correos de voto vía Brevo single-sender; por qué no Resend/Gmail; destinatarios en admin → Correos
