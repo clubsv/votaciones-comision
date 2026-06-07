@@ -528,12 +528,23 @@
         --corinto-tint: #2A2017;     /* fondo cálido oscuro */
       }
 
-      /* Textos que usan --navy como color de letra (oscuro sobre fondo oscuro → ilegible) */
-      h2, h3, h4,
+      /* Textos que usan --navy como color de letra (oscuro sobre fondo oscuro → ilegible).
+         Se igualan los selectores a la especificidad de las reglas base (.card h2, .modal h3,
+         etc.) para que el override gane; antes h2/h3 perdían contra .card h2. */
+      .card h2, .modal h3, h4,
+      .pregunta-titulo,
       .op-nombre, .op-cap-nombre,
       .field label, .btn-ghost,
       .prog-label, .stat-value,
-      .voto-resumen h4 { color: var(--text); }
+      .voto-resumen h4, .voto-resumen-val,
+      .modal-item-value { color: var(--text); }
+
+      /* Spinner y hover del botón fantasma sobre fondo oscuro */
+      .spinner { border-top-color: var(--accent); }
+      .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+      /* Franjas de acento (navy casi invisible sobre fondo oscuro) */
+      .voto-resumen-val, .modal-item-value { border-left-color: var(--accent); }
 
       /* Tarjeta hover y seleccionada: fondo claro hardcodeado → reemplazar */
       .opcion-card:hover  { background: #1E3A5F; border-color: var(--accent); }
