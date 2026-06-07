@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#003563">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Administración – Club Salvadoreño</title>
+  <script src="supabase-config.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      /* Paleta oficial Club Salvadoreño (brand manual) */
+      --navy:#003563; --navy-mid:#153662; --blue:#1E656D; --accent:#659ABC;
+      --corinto:#752A07; --cream:#F1F3CE; --corinto-tint:#F7EEE9;
+      --success:#2E7D32; --error:#C62828;
+      --bg:#EEF2F7; --surface:#FFFFFF; --border:#CBD5E1;
+      --text:#1E293B; --muted:#64748B; --radius:12px; --radius-sm:8px;
+      --shadow:0 4px 20px rgba(0,53,99,.14);
+    }
+    body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+
+    /* Header */
+    .hdr{background:var(--navy);padding:1.1rem 1.5rem;display:flex;align-items:center;gap:.9rem}
+    .hdr img{width:40px;height:46px;object-fit:contain;mix-blend-mode:screen}
+    .hdr h1{color:#fff;font-family:'Arial Black',Arial,sans-serif;font-size:1.05rem;letter-spacing:.1em;text-transform:uppercase}
+    .hdr .tag{color:var(--cream);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;margin-top:.15rem}
+    .hdr-spacer{flex:1}
+    .hdr-bar{height:4px;background:linear-gradient(90deg,var(--blue) 0%,#2E8F99 55%,rgba(255,255,255,.15) 100%)}
+
+    .main{flex:1;max-width:960px;width:100%;margin:0 auto;padding:1.5rem 1rem 3rem}
+
+    /* Screens */
+    .screen{display:none}.screen.active{display:block}
+
+    /* Login */
+    .pw-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);max-width:400px;margin:3rem auto;padding:2rem 1.75rem}
+    .pw-icon{width:58px;height:58px;border-radius:50%;background:var(--corinto-tint);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem}
+    .pw-card h2{font-family:'Arial Black',Arial,sans-serif;color:var(--navy);text-align:center;margin-bottom:.4rem}
+    .pw-card .sub{color:var(--muted);font-size:.88rem;text-align:center;margin-bottom:1.5rem;line-height:1.5}
+
+    /* Tabs */
+    .tabs{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.5rem;border-bottom:2px solid var(--border)}
+    .tab{padding:.65rem 1rem;font-size:.85rem;font-weight:700;color:var(--muted);background:none;border:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+    .tab:hover{color:var(--navy)}
+    .tab.active{color:var(--navy);border-bottom-color:var(--corinto)}
+    .panel{display:none}.panel.active{display:block}
+
+    /* Cards & fields */
+    .card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.5rem;margin-bottom:1.25rem}
+    .card h3{font-family:'Arial Black',Arial,sans-serif;color:var(--navy);font-size:1rem;margin-bottom:.3rem}
+    .card .hint{color:var(--muted);font-size:.82rem;line-height:1.5;margin-bottom:1.1rem}
+    .field{margin-bottom:1rem}
+    .field label{display:block;font-size:.74rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem}
+    .field input,.field textarea,.field select{width:100%;padding:.65rem .85rem;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:.95rem;color:var(--text);outline:none;font-family:inherit;background:var(--surface)}
+    .field input:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(101,154,188,.18)}
+    .field textarea{min-height:70px;resize:vertical}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
+    @media(max-width:560px){.row2{grid-template-columns:1fr}}
+    .inline{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+    .check{display:flex;align-items:center;gap:.55rem;font-size:.9rem;color:var(--text);margin-bottom:.7rem;cursor:pointer}
+    .check input{width:18px;height:18px;accent-color:var(--corinto)}
+
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;padding:.7rem 1.1rem;border-radius:var(--radius-sm);font-size:.88rem;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:background .15s,opacity .15s}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .btn-primary{background:var(--navy);color:#fff}.btn-primary:hover{background:var(--navy-mid)}
+    .btn-corinto{background:var(--corinto);color:#fff}.btn-corinto:hover{opacity:.9}
+    .btn-ghost{background:transparent;color:var(--text);border:2px solid var(--border)}.btn-ghost:hover{border-color:var(--navy);color:var(--navy)}
+    .btn-danger{background:#FEF2F2;color:var(--error);border:1px solid #FECACA}.btn-danger:hover{background:#FEE2E2}
+    .btn-sm{padding:.4rem .7rem;font-size:.78rem}
+    .btn-full{width:100%}
+
+    /* Tables */
+    table{width:100%;border-collapse:collapse;font-size:.85rem}
+    th{text-align:left;padding:.55rem .6rem;background:#F1F5F9;color:var(--navy);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--border)}
+    td{padding:.45rem .6rem;border-bottom:1px solid #EEF2F7;vertical-align:middle}
+    td input{width:100%;padding:.4rem .5rem;border:1px solid var(--border);border-radius:6px;font-size:.85rem;font-family:inherit}
+    .table-wrap{overflow-x:auto}
+    .mono{font-family:monospace;font-size:.82rem}
+
+    /* Bits */
+    .toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:.7rem 1.3rem;border-radius:99px;font-size:.85rem;font-weight:700;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .25s;z-index:300}
+    .toast.show{opacity:1}
+    .toast.err{background:var(--error)}
+    .err-msg{font-size:.79rem;color:var(--error);margin-top:.3rem;display:none}
+    .pill{display:inline-block;background:var(--corinto-tint);color:var(--corinto);border-radius:99px;padding:.15rem .6rem;font-size:.72rem;font-weight:700}
+    .sticky-save{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 40%);padding-top:1rem;display:flex;gap:.6rem;justify-content:flex-end}
+    .opcion-box{border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;background:#FAFCFE}
+    .miembro-row{display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;margin-bottom:.45rem;align-items:center}
+    .pregunta-box{border-left:4px solid var(--corinto);padding-left:1rem;margin-bottom:1.5rem}
+    .stats-bar{display:flex;flex-wrap:wrap;gap:.75rem;margin-bottom:1.25rem}
+    .stat{background:var(--surface);border-radius:var(--radius-sm);padding:.8rem 1.1rem;box-shadow:var(--shadow);flex:1;min-width:120px}
+    .stat .l{font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--muted)}
+    .stat .v{font-family:'Arial Black',Arial,sans-serif;font-size:1.5rem;color:var(--navy)}
+    .loading{text-align:center;padding:2.5rem;color:var(--muted)}
+    .spinner{width:42px;height:42px;border:4px solid var(--border);border-top-color:var(--corinto);border-radius:50%;animation:spin .75s linear infinite;margin:0 auto 1rem}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .footer{background:var(--navy);color:rgba(255,255,255,.35);text-align:center;padding:.8rem;font-size:.7rem;letter-spacing:.05em;text-transform:uppercase}
+  </style>
+</head>
+<body>
+
+<header class="hdr">
+  <img src="logo.jpg" alt="Club Salvadoreño">
+  <div>
+    <h1>Club Salvadoreño</h1>
+    <div class="tag">Panel Administrativo · Votación</div>
+  </div>
+  <div class="hdr-spacer"></div>
+  <button class="btn btn-ghost btn-sm" id="btn-logout" style="display:none;color:#fff;border-color:rgba(255,255,255,.4)" onclick="logout()">Salir</button>
+</header>
+<div class="hdr-bar"></div>
+
+<main class="main">
+
+  <!-- LOGIN -->
+  <div id="s-login" class="screen active">
+    <div class="pw-card">
+      <div class="pw-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#752A07" stroke-width="2.2">
+          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <h2>Acceso Administrativo</h2>
+      <p class="sub">Ingrese la clave para administrar la votación.</p>
+      <div class="field">
+        <label for="inp-pw">Clave administrativa</label>
+        <input type="password" id="inp-pw" placeholder="••••••••" autocomplete="off">
+        <div class="err-msg" id="pw-err">Clave incorrecta.</div>
+      </div>
+      <button class="btn btn-primary btn-full" id="btn-login" onclick="login()">Acceder</button>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="s-app" class="screen">
+    <div class="tabs">
+      <button class="tab active" data-tab="eleccion" onclick="tab('eleccion')">Elección</button>
+      <button class="tab" data-tab="planillas" onclick="tab('planillas')">Planillas</button>
+      <button class="tab" data-tab="padron" onclick="tab('padron')">Padrón</button>
+      <button class="tab" data-tab="correos" onclick="tab('correos')">Correos</button>
+      <button class="tab" data-tab="resultados" onclick="tab('resultados')">Resultados</button>
+      <button class="tab" data-tab="links" onclick="tab('links')">Links</button>
+    </div>
+
+    <!-- ELECCIÓN -->
+    <div id="p-eleccion" class="panel active">
+      <div class="card">
+        <h3>Datos de la elección</h3>
+        <p class="hint">Título y descripción que verán los votantes, además de las opciones generales.</p>
+        <div class="field"><label>Título</label><input id="set-titulo" type="text"></div>
+        <div class="field"><label>Descripción</label><textarea id="set-desc"></textarea></div>
+        <label class="check"><input type="checkbox" id="set-validar"> Validar padrón (el UID debe existir en el padrón)</label>
+        <label class="check"><input type="checkbox" id="set-mostrar"> Mostrar resultados públicamente (sin clave)</label>
+        <label class="check"><input type="checkbox" id="set-demo"> Modo demo (los votos no se guardan)</label>
+      </div>
+      <div class="sticky-save"><button class="btn btn-primary" onclick="guardarSettings()">Guardar configuración</button></div>
+    </div>
+
+    <!-- PLANILLAS -->
+    <div id="p-planillas" class="panel">
+      <div class="card">
+        <h3>Papeleta de votación</h3>
+        <p class="hint">Configure las preguntas y las planillas (opciones). En cada planilla puede definir un capitán destacado y los miembros con su cargo (el cargo es opcional).</p>
+        <div id="preguntas-edit"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addPregunta()">+ Agregar pregunta</button>
+      </div>
+      <div class="sticky-save"><button class="btn btn-primary" onclick="guardarBallot()">Guardar papeleta</button></div>
+    </div>
+
+    <!-- PADRÓN -->
+    <div id="p-padron" class="panel">
+      <div class="card">
+        <h3>Padrón de votantes</h3>
+        <p class="hint">UID = identificador único e intransferible de cada votante. Use “Generar UID” para crear uno aleatorio. Los miembros sin nombre cuentan como reserva.</p>
+        <div class="inline" style="margin-bottom:1rem">
+          <button class="btn btn-ghost btn-sm" onclick="addPadronRow()">+ Agregar fila</button>
+          <button class="btn btn-ghost btn-sm" onclick="abrirImport()">Importar / pegar lista</button>
+          <span class="pill" id="padron-count">0 registros</span>
+        </div>
+        <div id="import-box" style="display:none;margin-bottom:1rem">
+          <div class="field">
+            <label>Pegar lista (una persona por línea: <span class="mono">nombre [tab/coma] número de socio</span>). Se genera un UID automáticamente.</label>
+            <textarea id="import-text" placeholder="JUAN PEREZ, 12345&#10;MARIA LOPEZ, 67890"></textarea>
+          </div>
+          <button class="btn btn-corinto btn-sm" onclick="procesarImport()">Agregar al padrón</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:130px">UID</th><th>Nombre</th><th style="width:120px">N° socio</th><th style="width:48px"></th></tr></thead>
+            <tbody id="padron-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="sticky-save"><button class="btn btn-primary" onclick="guardarPadron()">Guardar padrón</button></div>
+    </div>
+
+    <!-- CORREOS -->
+    <div id="p-correos" class="panel">
+      <div class="card">
+        <h3>Correos de notificación</h3>
+        <p class="hint">Direcciones que reciben el correo cada vez que se registra un voto (con los resultados acumulados).</p>
+        <div id="correos-list"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addCorreo()">+ Agregar correo</button>
+        <div class="field" style="margin-top:1.2rem"><label>Asunto del correo</label><input id="set-asunto" type="text"></div>
+      </div>
+      <div class="sticky-save"><button class="btn btn-primary" onclick="guardarSettings()">Guardar configuración</button></div>
+    </div>
+
+    <!-- RESULTADOS -->
+    <div id="p-resultados" class="panel">
+      <div class="card">
+        <h3>Resultados y participación</h3>
+        <p class="hint">Detalle auditable de los votos registrados.</p>
+        <button class="btn btn-primary btn-sm" onclick="cargarResultados()">Actualizar resultados</button>
+        <div id="resultados-cont" style="margin-top:1.2rem"></div>
+      </div>
+    </div>
+
+    <!-- LINKS -->
+    <div id="p-links" class="panel">
+      <div class="card">
+        <h3>Generar links de votación</h3>
+        <p class="hint">Genera el enlace personal e intransferible y el mensaje de WhatsApp para cada miembro del padrón con nombre.</p>
+        <div class="field"><label>URL base del sitio</label><input id="links-base" type="text"></div>
+        <button class="btn btn-primary btn-sm" onclick="generarLinks()">Generar</button>
+        <div id="links-cont" style="margin-top:1.2rem"></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+<footer class="footer">Club Salvadoreño · Panel Administrativo</footer>
+
+<script>
+'use strict';
+
+let PW = '';
+let CONFIG = null;            // { settings, preguntas, padron }
+let padronRows = [];          // { uid, nombre, numero_socio, _orig }
+let removeUids = [];
+
+// ── API admin ──────────────────────────────────────────────────
+async function adminAPI(action, payload) {
+  const res = await fetch(`${window.SUPABASE.FUNCTIONS_URL}/admin?action=${action}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${window.SUPABASE.ANON_KEY}`,
+      'apikey': window.SUPABASE.ANON_KEY,
+      'X-Admin-Password': PW,
+    },
+    body: JSON.stringify(payload || {}),
+  });
+  let data; try { data = await res.json(); } catch { data = { error: 'HTTP ' + res.status }; }
+  if (res.status === 401) { data._unauth = true; }
+  return data;
+}
+
+// ── Login ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  if (!window.SUPABASE || window.SUPABASE.URL.includes('TU-PROYECTO')) {
+    alert('Configure SUPABASE.URL y ANON_KEY en supabase-config.js');
+  }
+  const saved = sessionStorage.getItem('admin_pw');
+  if (saved) { PW = saved; entrar(); }
+  document.getElementById('inp-pw').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+  document.getElementById('links-base').value = location.origin + location.pathname.replace(/admin\.html$/, '');
+});
+
+async function login() {
+  PW = document.getElementById('inp-pw').value;
+  const r = await adminAPI('login');
+  if (r._unauth || r.error) {
+    document.getElementById('pw-err').style.display = 'block';
+    document.getElementById('inp-pw').value = '';
+    return;
+  }
+  sessionStorage.setItem('admin_pw', PW);
+  entrar();
+}
+
+function logout() {
+  sessionStorage.removeItem('admin_pw'); PW = '';
+  document.getElementById('s-app').classList.remove('active');
+  document.getElementById('s-login').classList.add('active');
+  document.getElementById('btn-logout').style.display = 'none';
+}
+
+async function entrar() {
+  document.getElementById('s-login').classList.remove('active');
+  document.getElementById('s-app').classList.add('active');
+  document.getElementById('btn-logout').style.display = '';
+  await recargarConfig();
+}
+
+async function recargarConfig() {
+  const r = await adminAPI('getConfig');
+  if (r._unauth) { logout(); return; }
+  if (r.error) { toast(r.error, true); return; }
+  CONFIG = r;
+  pintarSettings();
+  pintarBallot();
+  pintarCorreos();
+  pintarPadron();
+}
+
+// ── Tabs ───────────────────────────────────────────────────────
+function tab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('p-' + name).classList.add('active');
+}
+
+// ── Settings ───────────────────────────────────────────────────
+function pintarSettings() {
+  const s = CONFIG.settings;
+  document.getElementById('set-titulo').value = s.titulo || '';
+  document.getElementById('set-desc').value = s.descripcion || '';
+  document.getElementById('set-validar').checked = !!s.validar_padron;
+  document.getElementById('set-mostrar').checked = !!s.mostrar_resultados;
+  document.getElementById('set-demo').checked = !!s.modo_demo;
+  document.getElementById('set-asunto').value = s.email_asunto || '';
+}
+
+async function guardarSettings() {
+  const settings = {
+    titulo: document.getElementById('set-titulo').value.trim(),
+    descripcion: document.getElementById('set-desc').value.trim(),
+    validar_padron: document.getElementById('set-validar').checked,
+    mostrar_resultados: document.getElementById('set-mostrar').checked,
+    modo_demo: document.getElementById('set-demo').checked,
+    email_asunto: document.getElementById('set-asunto').value.trim(),
+    emails_notificacion: leerCorreos(),
+  };
+  const r = await adminAPI('saveSettings', { settings });
+  r.error ? toast(r.error, true) : toast('Configuración guardada');
+}
+
+// ── Correos ────────────────────────────────────────────────────
+function pintarCorreos() {
+  const cont = document.getElementById('correos-list');
+  cont.innerHTML = '';
+  const emails = CONFIG.settings.emails_notificacion || [];
+  (emails.length ? emails : ['']).forEach(e => cont.appendChild(correoRow(e)));
+}
+function correoRow(value) {
+  const div = document.createElement('div');
+  div.className = 'inline'; div.style.marginBottom = '.5rem';
+  div.innerHTML = `<input type="email" class="correo-inp" value="${esc(value)}" placeholder="correo@clubsalvadoreno.com" style="flex:1;padding:.6rem .8rem;border:2px solid var(--border);border-radius:8px">
+    <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+  return div;
+}
+function addCorreo() { document.getElementById('correos-list').appendChild(correoRow('')); }
+function leerCorreos() {
+  return [...document.querySelectorAll('.correo-inp')].map(i => i.value.trim()).filter(Boolean);
+}
+
+// ── Ballot (planillas) ─────────────────────────────────────────
+function pintarBallot() {
+  const cont = document.getElementById('preguntas-edit');
+  cont.innerHTML = '';
+  (CONFIG.preguntas || []).forEach((p, qi) => cont.appendChild(preguntaBox(p, qi)));
+}
+function preguntaBox(p, qi) {
+  const box = document.createElement('div');
+  box.className = 'pregunta-box'; box.dataset.q = qi;
+  box.innerHTML = `
+    <div class="row2">
+      <div class="field"><label>Título de la pregunta</label><input class="q-titulo" value="${esc(p.titulo || '')}"></div>
+      <div class="field"><label>Descripción</label><input class="q-desc" value="${esc(p.descripcion || '')}"></div>
+    </div>
+    <div class="opciones-edit"></div>
+    <div class="inline">
+      <button class="btn btn-ghost btn-sm" onclick="addOpcion(this)">+ Agregar planilla/opción</button>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.pregunta-box').remove()">Eliminar pregunta</button>
+    </div>`;
+  const oc = box.querySelector('.opciones-edit');
+  (p.opciones || []).forEach(o => oc.appendChild(opcionBox(o)));
+  return box;
+}
+function opcionBox(o) {
+  o = o || {};
+  const cap = o.capitan || {};
+  const box = document.createElement('div');
+  box.className = 'opcion-box';
+  box.innerHTML = `
+    <div class="row2">
+      <div class="field"><label>Nombre de la opción</label><input class="o-nombre" value="${esc(o.nombre || '')}" placeholder="Ej: Aprobar Planilla"></div>
+      <div class="field"><label>Color</label><input class="o-color" type="color" value="${esc(o.color || '#1E656D')}" style="height:42px;padding:.2rem"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Capitán — nombre (opcional)</label><input class="o-cap-nombre" value="${esc(cap.nombre || '')}"></div>
+      <div class="field"><label>Capitán — cargo (opcional)</label><input class="o-cap-cargo" value="${esc(cap.cargo || '')}"></div>
+    </div>
+    <label style="font-size:.74rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em">Miembros</label>
+    <div class="miembros-edit" style="margin:.5rem 0"></div>
+    <div class="inline">
+      <button class="btn btn-ghost btn-sm" onclick="addMiembro(this)">+ Miembro</button>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.opcion-box').remove()">Eliminar opción</button>
+    </div>`;
+  const me = box.querySelector('.miembros-edit');
+  (o.miembros || []).forEach(m => me.appendChild(miembroRow(m)));
+  return box;
+}
+function miembroRow(m) {
+  m = m || {};
+  const nombre = (typeof m === 'object') ? (m.nombre || '') : m;
+  const cargo = (typeof m === 'object') ? (m.cargo || '') : '';
+  const div = document.createElement('div');
+  div.className = 'miembro-row';
+  div.innerHTML = `<input class="m-nombre" value="${esc(nombre)}" placeholder="Nombre">
+    <input class="m-cargo" value="${esc(cargo)}" placeholder="Cargo (opcional)">
+    <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+  return div;
+}
+function addPregunta() { document.getElementById('preguntas-edit').appendChild(preguntaBox({ opciones: [{}] }, Date.now())); }
+function addOpcion(btn) { btn.closest('.pregunta-box').querySelector('.opciones-edit').appendChild(opcionBox({})); }
+function addMiembro(btn) { btn.closest('.opcion-box').querySelector('.miembros-edit').appendChild(miembroRow({})); }
+
+function leerBallot() {
+  return [...document.querySelectorAll('.pregunta-box')].map(qb => ({
+    titulo: qb.querySelector('.q-titulo').value.trim(),
+    descripcion: qb.querySelector('.q-desc').value.trim(),
+    opciones: [...qb.querySelectorAll('.opcion-box')].map(ob => {
+      const capN = ob.querySelector('.o-cap-nombre').value.trim();
+      const capC = ob.querySelector('.o-cap-cargo').value.trim();
+      return {
+        nombre: ob.querySelector('.o-nombre').value.trim(),
+        color: ob.querySelector('.o-color').value,
+        capitan: capN ? { nombre: capN, cargo: capC } : null,
+        miembros: [...ob.querySelectorAll('.miembro-row')].map(mr => ({
+          nombre: mr.querySelector('.m-nombre').value.trim(),
+          cargo: mr.querySelector('.m-cargo').value.trim() || null,
+        })).filter(m => m.nombre),
+      };
+    }).filter(o => o.nombre),
+  })).filter(q => q.titulo);
+}
+async function guardarBallot() {
+  const r = await adminAPI('saveBallot', { preguntas: leerBallot() });
+  if (r.error) return toast(r.error, true);
+  toast('Papeleta guardada'); await recargarConfig();
+}
+
+// ── Padrón ─────────────────────────────────────────────────────
+function pintarPadron() {
+  padronRows = (CONFIG.padron || []).map(p => ({ ...p, _orig: p.uid }));
+  removeUids = [];
+  renderPadron();
+}
+function renderPadron() {
+  const body = document.getElementById('padron-body');
+  body.innerHTML = '';
+  padronRows.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="inline" style="gap:.3rem"><input class="mono" value="${esc(p.uid || '')}" onchange="padronRows[${i}].uid=this.value.trim()">
+        <button class="btn btn-ghost btn-sm" title="Generar UID" onclick="genUid(${i})">⟳</button></td>
+      <td><input value="${esc(p.nombre || '')}" onchange="padronRows[${i}].nombre=this.value"></td>
+      <td><input value="${esc(p.numero_socio || '')}" onchange="padronRows[${i}].numero_socio=this.value.trim()"></td>
+      <td><button class="btn btn-danger btn-sm" onclick="delPadron(${i})">✕</button></td>`;
+    body.appendChild(tr);
+  });
+  document.getElementById('padron-count').textContent =
+    padronRows.filter(p => (p.nombre || '').trim()).length + ' con nombre · ' + padronRows.length + ' UIDs';
+}
+function genUid(i) { padronRows[i].uid = nuevoUid(); renderPadron(); }
+function nuevoUid() {
+  const c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let s = ''; for (let k = 0; k < 8; k++) s += c[Math.floor(Math.random() * c.length)];
+  return s;
+}
+function addPadronRow() { padronRows.push({ uid: nuevoUid(), nombre: '', numero_socio: '' }); renderPadron(); }
+function delPadron(i) {
+  const p = padronRows[i];
+  if (p._orig) removeUids.push(p._orig);
+  padronRows.splice(i, 1); renderPadron();
+}
+function abrirImport() {
+  const b = document.getElementById('import-box');
+  b.style.display = b.style.display === 'none' ? 'block' : 'none';
+}
+function procesarImport() {
+  const txt = document.getElementById('import-text').value.trim();
+  if (!txt) return;
+  txt.split('\n').forEach(line => {
+    const parts = line.split(/\t|,|;/).map(s => s.trim());
+    const nombre = parts[0] || '';
+    if (!nombre) return;
+    padronRows.push({ uid: nuevoUid(), nombre, numero_socio: parts[1] || '' });
+  });
+  document.getElementById('import-text').value = '';
+  document.getElementById('import-box').style.display = 'none';
+  renderPadron();
+  toast('Filas agregadas (recuerde Guardar padrón)');
+}
+async function guardarPadron() {
+  const padron = padronRows.map(p => ({ uid: (p.uid || '').trim(), nombre: (p.nombre || '').trim(), numero_socio: p.numero_socio || null })).filter(p => p.uid);
+  const r = await adminAPI('savePadron', { padron, removeUids });
+  if (r.error) return toast(r.error, true);
+  toast('Padrón guardado (' + (r.total ?? padron.length) + ')'); await recargarConfig();
+}
+
+// ── Resultados ─────────────────────────────────────────────────
+async function cargarResultados() {
+  const cont = document.getElementById('resultados-cont');
+  cont.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando…</div>';
+  const r = await adminAPI('getResults');
+  if (r.error) { cont.innerHTML = ''; return toast(r.error, true); }
+
+  const part = r.totalPadron > 0 ? Math.round((r.totalVotos / r.totalPadron) * 100) : null;
+  let html = `<div class="stats-bar">
+    <div class="stat"><div class="l">Votos</div><div class="v">${r.totalVotos}</div></div>
+    ${r.totalPadron > 0 ? `<div class="stat"><div class="l">Participación</div><div class="v">${part}%</div></div>
+    <div class="stat"><div class="l">Pendientes</div><div class="v">${r.totalPadron - r.totalVotos}</div></div>` : ''}
+  </div>`;
+
+  r.preguntas.forEach(p => {
+    html += `<div class="card" style="box-shadow:none;border:1px solid var(--border)"><h3>${esc(p.titulo)}</h3><table><thead><tr><th>Opción</th><th style="width:80px">Votos</th><th style="width:70px">%</th></tr></thead><tbody>`;
+    p.opciones.forEach(o => { html += `<tr><td>${esc(o.nombre)}</td><td>${o.votos}</td><td>${o.porcentaje}%</td></tr>`; });
+    html += `</tbody></table></div>`;
+  });
+
+  if (r.detalle && r.detalle.length) {
+    html += `<div class="card" style="box-shadow:none;border:1px solid var(--border)"><h3>Detalle auditable (${r.detalle.length})</h3><div class="table-wrap"><table><thead><tr><th>UID</th><th>Nombre</th><th>Selección</th><th>Fecha</th></tr></thead><tbody>`;
+    r.detalle.forEach(d => {
+      html += `<tr><td class="mono">${esc(d.uid)}</td><td>${esc(d.nombre || '—')}</td><td>${esc((d.selecciones || []).join(', '))}</td><td>${esc(new Date(d.fecha).toLocaleString('es-SV'))}</td></tr>`;
+    });
+    html += `</tbody></table></div></div>`;
+  }
+  cont.innerHTML = html;
+}
+
+// ── Links ──────────────────────────────────────────────────────
+async function generarLinks() {
+  const cont = document.getElementById('links-cont');
+  cont.innerHTML = '<div class="loading"><div class="spinner"></div>Generando…</div>';
+  const baseUrl = document.getElementById('links-base').value.trim();
+  const r = await adminAPI('generateLinks', { baseUrl });
+  if (r.error) { cont.innerHTML = ''; return toast(r.error, true); }
+  let html = `<p class="hint">${r.links.length} links generados.</p><div class="table-wrap"><table><thead><tr><th>N° socio</th><th>Nombre</th><th>Link</th><th style="width:90px">WhatsApp</th></tr></thead><tbody>`;
+  r.links.forEach((l, i) => {
+    window['_wa' + i] = l.whatsapp;
+    html += `<tr><td>${esc(l.numero_socio || '—')}</td><td>${esc(l.nombre)}</td><td class="mono"><a href="${esc(l.link)}" target="_blank">${esc(l.link)}</a></td><td><button class="btn btn-ghost btn-sm" onclick="copiar(window._wa${i})">Copiar</button></td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+  cont.innerHTML = html;
+}
+function copiar(txt) { navigator.clipboard.writeText(txt).then(() => toast('Mensaje copiado')); }
+
+// ── Utils ──────────────────────────────────────────────────────
+function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+let toastT = null;
+function toast(msg, err) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show' + (err ? ' err' : '');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600);
+}
+</script>
+</body>
+</html>

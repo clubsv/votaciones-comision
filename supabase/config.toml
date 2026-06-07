@@ -1,0 +1,10 @@
+# Configuración del proyecto Supabase (CLI).
+# project_id se reemplaza con el ref real al hacer `supabase link`.
+project_id = "votaciones-comision"
+
+# Funciones públicas: validan por sí mismas (clave/padrón), sin JWT de Supabase.
+[functions.api]
+verify_jwt = false
+
+[functions.admin]
+verify_jwt = false

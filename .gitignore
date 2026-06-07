@@ -1,0 +1,31 @@
+# Supabase CLI
+supabase/.branches
+supabase/.temp
+supabase/.env.local
+.env
+.env.local
+
+# Datos sensibles — NUNCA publicar (los datos viven en Supabase, no en el repo)
+# padrón con teléfonos/correos
+*.xlsx
+# contiene los UIDs (credenciales de voto)
+supabase/seed.sql
+# material interno del club
+brand_manual.pdf
+uids.txt
+padron_votacion.xlsx
+
+# Sistema anterior (Apps Script) — referencia local, NO publicar
+# config.json contiene una contraseña en texto plano
+config.json
+links.md
+gen_links.js
+apps-script/
+
+# Herramientas locales
+.claude/
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+*.log

@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#003563">
+  <meta name="description" content="Sistema de Votación Electrónica – Club Salvadoreño">
+  <title>Votaciones – Club Salvadoreño</title>
+  <script src="supabase-config.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* ── Paleta oficial Club Salvadoreño (brand manual) ── */
+      --navy:     #003563;   /* institucional primario  */
+      --navy-mid: #153662;   /* institucional secundario */
+      --blue:     #1E656D;   /* acento Corinto · teal   */
+      --accent:   #659ABC;   /* azul claro institucional */
+      --corinto:  #752A07;   /* acento Corinto · vino   */
+      --cream:    #F1F3CE;   /* acento Corinto · crema  */
+      --corinto-tint: #F7EEE9; /* fondo cálido sutil    */
+      --success:  #2E7D32;
+      --error:    #C62828;
+      --warning:  #B45309;
+      --bg:       #EEF2F7;
+      --surface:  #FFFFFF;
+      --border:   #CBD5E1;
+      --text:     #1E293B;
+      --muted:    #64748B;
+      --radius:   12px;
+      --radius-sm:8px;
+      --shadow:   0 4px 20px rgba(0,53,99,.14);
+      --shadow-lg:0 8px 36px rgba(0,53,99,.22);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── DEMO BANNER ── */
+    #demo-banner {
+      background: #FFFBEB;
+      border-bottom: 2px solid #FDE68A;
+      padding: .5rem 1rem;
+      text-align: center;
+      font-size: .8rem;
+      color: #92400E;
+    }
+    #demo-banner code {
+      background: rgba(0,0,0,.07);
+      padding: .1rem .35rem;
+      border-radius: 3px;
+      font-size: .77rem;
+    }
+
+    /* ── HEADER ── */
+    .hdr {
+      background: var(--navy);
+      padding: 1.75rem 1.5rem 1.5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hdr::before {
+      content: '';
+      position: absolute;
+      left: -70px; top: -50px;
+      width: 320px; height: 360px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 90' fill='none'%3E%3Cpath d='M40 3 L75 15 V52 C75 73 59 85 40 90 C21 85 5 73 5 52 V15 Z' stroke='white' stroke-width='3' stroke-linejoin='round'/%3E%3Cpolyline points='37,26 18,26 18,64 37,64' stroke='white' stroke-width='6.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M62,26 L43,26 L43,45 L62,45 L62,64 L43,64' stroke='white' stroke-width='6.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-size: contain;
+      opacity: .05;
+      pointer-events: none;
+    }
+    .hdr-inner { position: relative; z-index: 1; }
+    .hdr-logo-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: .6rem;
+    }
+    .hdr-svg { width: 54px; height: 60px; flex-shrink: 0; }
+    .hdr-logo-img {
+      width: 60px;
+      height: 68px;
+      object-fit: contain;
+      flex-shrink: 0;
+      mix-blend-mode: screen; /* fondo oscuro del jpg desaparece en el header navy */
+    }
+    .hdr-brand { text-align: left; }
+    .hdr-brand h1 {
+      color: #fff;
+      font-family: 'Arial Black', Arial, sans-serif;
+      font-size: clamp(1.05rem, 5vw, 1.5rem);
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      line-height: 1.05;
+    }
+    .hdr-brand p {
+      color: rgba(255,255,255,.5);
+      font-size: .76rem;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      margin-top: .18rem;
+    }
+    .hdr-election {
+      color: rgba(255,255,255,.8);
+      font-size: clamp(.85rem, 3vw, 1rem);
+      margin-top: .5rem;
+      font-style: italic;
+    }
+    .hdr-bar {
+      height: 4px;
+      background: linear-gradient(90deg, var(--blue) 0%, #1B8EAD 55%, rgba(255,255,255,.15) 100%);
+    }
+
+    /* ── MAIN ── */
+    .main {
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 540px;
+      padding: 2rem 1.75rem;
+      animation: fadeUp .28s ease both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-icon {
+      width: 58px; height: 58px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.25rem;
+    }
+    .ci-blue   { background: #EFF6FF; color: var(--accent); }
+    .ci-green  { background: #F0FDF4; color: var(--success); }
+    .ci-red    { background: #FEF2F2; color: var(--error); }
+    .ci-orange { background: #FFF7ED; color: var(--warning); }
+
+    .card h2 {
+      text-align: center;
+      font-family: 'Arial Black', Arial, sans-serif;
+      font-size: clamp(1.05rem, 4vw, 1.25rem);
+      color: var(--navy);
+      margin-bottom: .4rem;
+    }
+    .card .sub {
+      text-align: center;
+      color: var(--muted);
+      font-size: .88rem;
+      line-height: 1.55;
+      margin-bottom: 1.75rem;
+    }
+
+    /* ── FORM ── */
+    .field { margin-bottom: 1.25rem; }
+    .field label {
+      display: block;
+      font-size: .77rem;
+      font-weight: 700;
+      color: var(--navy);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: .4rem;
+    }
+    .field input {
+      width: 100%;
+      padding: .8rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 1.15rem;
+      color: var(--text);
+      outline: none;
+      letter-spacing: .12em;
+      transition: border-color .2s, box-shadow .2s;
+      -webkit-appearance: none;
+    }
+    .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(25,118,210,.12); }
+    .field input.inp-err { border-color: var(--error); }
+    .field .hint { font-size: .77rem; color: var(--muted); margin-top: .3rem; }
+    .err-msg {
+      font-size: .79rem;
+      color: var(--error);
+      margin-top: .35rem;
+      display: none;
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: .45rem;
+      width: 100%;
+      padding: .88rem 1.5rem;
+      border-radius: var(--radius-sm);
+      font-size: .95rem;
+      font-weight: 700;
+      font-family: Arial, sans-serif;
+      letter-spacing: .03em;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      transition: background .18s, transform .1s, box-shadow .18s;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
+    .btn-primary { background: var(--navy); color: #fff; box-shadow: 0 2px 10px rgba(13,33,55,.28); }
+    .btn-primary:hover { background: var(--navy-mid); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-success:hover { background: #27672B; }
+    .btn-ghost { background: transparent; color: var(--text); border: 2px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--navy); color: var(--navy); }
+    .btn-sm { padding: .55rem 1rem; font-size: .84rem; width: auto; }
+
+    /* ── PREGUNTA BLOCK ── */
+    .pregunta-block {
+      margin-bottom: 1.75rem;
+      padding-bottom: 1.75rem;
+      border-bottom: 2px solid var(--bg);
+    }
+    .pregunta-block:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    .pregunta-num {
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--blue);
+      margin-bottom: .5rem;
+    }
+    .pregunta-num-badge {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--navy);
+      color: #fff;
+      font-size: .7rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .pregunta-titulo {
+      font-family: 'Arial Black', Arial, sans-serif;
+      font-size: 1rem;
+      color: var(--navy);
+      margin-bottom: .3rem;
+    }
+    .pregunta-desc {
+      font-size: .83rem;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-bottom: .9rem;
+    }
+
+    /* ── OPCIONES ── */
+    .opciones { display: flex; flex-direction: column; gap: .6rem; }
+
+    .opcion-card {
+      display: flex;
+      align-items: center;
+      gap: .85rem;
+      padding: .9rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: border-color .18s, background .18s, box-shadow .18s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .opcion-card:hover { border-color: var(--accent); background: #F8FBFF; }
+    .opcion-card.selected {
+      border-color: var(--corinto);
+      background: var(--corinto-tint);
+      box-shadow: 0 0 0 3px rgba(117,42,7,.12);
+    }
+
+    .op-radio {
+      width: 20px; height: 20px; flex-shrink: 0;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color .18s, background .18s;
+    }
+    .opcion-card.selected .op-radio { border-color: var(--corinto); background: var(--corinto); }
+    .op-radio::after {
+      content: '';
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #fff;
+      opacity: 0;
+      transition: opacity .18s;
+    }
+    .opcion-card.selected .op-radio::after { opacity: 1; }
+
+    .op-color { width: 6px; height: 40px; border-radius: 3px; flex-shrink: 0; }
+
+    .op-info { flex: 1; min-width: 0; }
+    .op-nombre { font-weight: 700; font-size: .93rem; color: var(--navy); }
+    .op-desc { font-size: .79rem; color: var(--muted); margin-top: .1rem; line-height: 1.4; }
+
+    /* ── PLANILLA CAPITÁN ── */
+    .op-cap-row {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      margin-top: .55rem;
+    }
+    .op-cap-nombre {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--navy);
+      letter-spacing: .01em;
+    }
+    .op-cap-badge {
+      font-size: .68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      background: var(--corinto);
+      color: #fff;
+      border-radius: 99px;
+      padding: .18rem .6rem;
+      flex-shrink: 0;
+    }
+    .op-cap-cargo { color: var(--corinto); font-weight: 700; }
+    .op-cap-miembros {
+      margin-top: .3rem;
+      display: flex;
+      flex-direction: column;
+      gap: .1rem;
+    }
+    .op-cap-miembro {
+      font-size: .78rem;
+      color: var(--muted);
+      padding-left: .15rem;
+    }
+
+    /* ── ALERT ── */
+    .alert {
+      border-radius: var(--radius-sm);
+      padding: .8rem 1rem;
+      font-size: .86rem;
+      display: flex;
+      gap: .6rem;
+      line-height: 1.5;
+    }
+    .alert-err  { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; }
+    .alert-warn { background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; }
+    .alert-ok   { background: #F0FDF4; border: 1px solid #BBF7D0; color: #14532D; }
+
+    /* ── SPINNER ── */
+    .spinner {
+      width: 50px; height: 50px;
+      border: 4px solid var(--border);
+      border-top-color: var(--navy);
+      border-radius: 50%;
+      animation: spin .75s linear infinite;
+      margin: 0 auto 1.25rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── MODAL ── */
+    .modal-bg {
+      position: fixed; inset: 0;
+      background: rgba(13,33,55,.65);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 1rem;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 2rem 1.75rem;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+      animation: fadeUp .22s ease;
+    }
+    .modal h3 {
+      font-family: 'Arial Black', Arial, sans-serif;
+      color: var(--navy);
+      font-size: 1.1rem;
+      margin-bottom: .45rem;
+    }
+    .modal p { color: var(--muted); font-size: .87rem; line-height: 1.55; margin-bottom: 1.2rem; }
+
+    .modal-resumen {
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      padding: .9rem 1rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: .6rem;
+    }
+    .modal-item { font-size: .88rem; color: var(--text); }
+    .modal-item-label {
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: .15rem;
+    }
+    .modal-item-value {
+      font-weight: 700;
+      color: var(--navy);
+      border-left: 3px solid var(--navy);
+      padding-left: .6rem;
+    }
+
+    .modal-actions { display: flex; gap: .7rem; flex-direction: column; }
+    @media (min-width: 400px) {
+      .modal-actions { flex-direction: row-reverse; }
+      .modal-actions .btn { width: auto; flex: 1; }
+    }
+
+    /* ── SUCCESS ── */
+    .success-circle {
+      width: 74px; height: 74px;
+      background: linear-gradient(135deg, var(--navy), var(--blue));
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.25rem;
+      box-shadow: 0 4px 22px rgba(13,33,55,.28);
+    }
+
+    /* ── RESUMEN VOTO ── */
+    .voto-resumen {
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.1rem;
+      margin-top: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+    }
+    .voto-resumen h4 {
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: .1rem;
+    }
+    .voto-resumen-item { }
+    .voto-resumen-cat {
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+      margin-bottom: .2rem;
+    }
+    .voto-resumen-val {
+      font-weight: 700;
+      font-size: .93rem;
+      color: var(--navy);
+      border-left: 3px solid var(--navy);
+      padding-left: .6rem;
+    }
+
+    /* ── SCREENS ── */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ── FOOTER ── */
+    .footer {
+      background: var(--navy);
+      color: rgba(255,255,255,.35);
+      text-align: center;
+      padding: .85rem 1rem;
+      font-size: .7rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    /* ── UTILS ── */
+    .hidden { display: none !important; }
+    .tc { text-align: center; }
+    .mt1 { margin-top: .5rem; }
+    .mt2 { margin-top: 1rem; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 380px) {
+      .card { padding: 1.5rem 1.1rem; }
+      .hdr  { padding: 1.3rem 1rem 1.2rem; }
+    }
+    @media (min-width: 600px) { .main { padding: 2.5rem 1.5rem; } }
+    @media (min-width: 900px) { .main { padding: 3rem 2rem; align-items: center; } }
+
+    /* ── MODO OSCURO ── */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:      #0F172A;
+        --surface: #1E293B;
+        --border:  #334155;
+        --text:    #E2E8F0;
+        --muted:   #94A3B8;
+        --accent:  #8AB6D6;
+        --corinto: #C77A4E;          /* corinto aclarado para fondo oscuro */
+        --corinto-tint: #2A2017;     /* fondo cálido oscuro */
+      }
+
+      /* Textos que usan --navy como color de letra (oscuro sobre fondo oscuro → ilegible) */
+      h2, h3, h4,
+      .op-nombre, .op-cap-nombre,
+      .field label, .btn-ghost,
+      .prog-label, .stat-value,
+      .voto-resumen h4 { color: var(--text); }
+
+      /* Tarjeta hover y seleccionada: fondo claro hardcodeado → reemplazar */
+      .opcion-card:hover  { background: #1E3A5F; border-color: var(--accent); }
+      .opcion-card.selected {
+        background: var(--corinto-tint);
+        border-color: var(--corinto);
+        box-shadow: 0 0 0 3px rgba(199,122,78,.25);
+      }
+      .opcion-card.selected .op-radio  { border-color: var(--corinto); background: var(--corinto); }
+      .opcion-card.selected .op-nombre { color: #fff; }
+      .opcion-card.selected .op-cap-nombre { color: #fff; }
+      .opcion-card.selected .op-cap-miembro { color: #CBD5E1; }
+
+      /* Input */
+      .field input {
+        background: #0F172A;
+        color: var(--text);
+        border-color: var(--border);
+      }
+      .field input::placeholder { color: #475569; }
+
+      /* Alerta de error */
+      .alert-err { background: #3B1010; border-color: #C62828; color: #FCA5A5; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Demo banner -->
+<div id="demo-banner" class="hidden">
+  ⚠️ <strong>Modo Demo activo</strong> — los votos no se guardan.
+  Desactive el modo demo en el panel administrativo para activar el sistema real.
+</div>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-logo-row">
+      <img src="logo.jpg" class="hdr-logo-img" alt="Club Salvadoreño">
+      <div class="hdr-brand">
+        <h1>Club Salvadoreño</h1>
+        <p>Sistema de Votación</p>
+      </div>
+    </div>
+    <p class="hdr-election" id="hdr-title"></p>
+  </div>
+</header>
+<div class="hdr-bar"></div>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- Cargando -->
+  <div id="s-loading" class="card screen active tc">
+    <div class="spinner"></div>
+    <p style="color:var(--muted)">Cargando configuración…</p>
+  </div>
+
+  <!-- Identificación del socio -->
+  <div id="s-inicio" class="card screen">
+    <div class="card-icon ci-blue">
+      <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    </div>
+    <h2>Identificación del Votante</h2>
+    <p class="sub" id="inicio-sub">Ingrese su identificador único para acceder al proceso de votación.</p>
+    <div class="field">
+      <label for="inp-socio">Identificador Único</label>
+      <input type="text" id="inp-socio" placeholder="Ej: aF6rg82K"
+             maxlength="20" autocomplete="off" inputmode="text"/>
+      <div class="hint">Sin espacios ni caracteres especiales.</div>
+      <div class="err-msg" id="socio-err" role="alert"></div>
+    </div>
+    <button class="btn btn-primary" id="btn-continuar" onclick="verificarSocio()">
+      Continuar
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Verificando -->
+  <div id="s-verificando" class="card screen tc">
+    <div class="spinner"></div>
+    <h2 style="margin-bottom:.4rem">Verificando…</h2>
+    <p style="color:var(--muted);font-size:.9rem">Validando identificador…</p>
+  </div>
+
+  <!-- Votación (multi-pregunta) -->
+  <div id="s-votacion" class="card screen">
+    <h2 id="votacion-titulo">Emita su Voto</h2>
+    <p class="sub" id="votacion-sub"></p>
+
+    <!-- Preguntas generadas dinámicamente -->
+    <div id="preguntas-container"></div>
+
+    <div id="vot-err" class="alert alert-err hidden" role="alert" style="margin-bottom:1rem;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0;margin-top:1px" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="vot-err-txt">Por favor responda todas las preguntas antes de continuar.</span>
+    </div>
+
+    <button class="btn btn-primary" onclick="confirmarVoto()">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      Registrar Voto
+    </button>
+    <div class="tc mt2">
+      <button class="btn btn-ghost btn-sm" onclick="volverInicio()">← Volver</button>
+    </div>
+  </div>
+
+  <!-- Enviando -->
+  <div id="s-enviando" class="card screen tc">
+    <div class="spinner"></div>
+    <h2 style="margin-bottom:.4rem">Registrando voto…</h2>
+    <p style="color:var(--muted);font-size:.9rem">Por favor espere, no cierre esta ventana.</p>
+  </div>
+
+  <!-- Éxito -->
+  <div id="s-exito" class="card screen">
+    <div class="success-circle">
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.6" aria-hidden="true">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <h2>¡Voto Registrado!</h2>
+    <p class="sub">Su voto ha sido registrado exitosamente.<br>Gracias por participar en esta elección.</p>
+
+    <div class="voto-resumen">
+      <h4>Sus selecciones</h4>
+      <div id="exito-selecciones"></div>
+    </div>
+
+    <p style="font-size:.8rem;color:var(--muted);text-align:center;margin-top:1rem;line-height:1.5;">
+      Los resultados serán comunicados por los canales oficiales<br>del Club Salvadoreño al cierre de la votación.
+    </p>
+  </div>
+
+  <!-- Ya votó -->
+  <div id="s-ya-voto" class="card screen">
+    <div class="card-icon ci-orange">
+      <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    </div>
+    <h2>Voto ya Registrado</h2>
+    <p class="sub">
+      Este miembro ya registró su voto en esta elección.<br>
+      Solo se permite <strong>un voto por miembro</strong>.
+    </p>
+    <button class="btn btn-ghost mt2" onclick="volverInicio()">← Ingresar otro número</button>
+  </div>
+
+  <!-- Error -->
+  <div id="s-error" class="card screen">
+    <div class="card-icon ci-red">
+      <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="15" y1="9" x2="9" y2="15"/>
+        <line x1="9"  y1="9" x2="15" y2="15"/>
+      </svg>
+    </div>
+    <h2 id="err-titulo">Error</h2>
+    <p class="sub" id="err-msg">Ocurrió un error inesperado. Intente nuevamente.</p>
+    <button class="btn btn-primary mt1" onclick="volverInicio()">Intentar nuevamente</button>
+  </div>
+
+</main>
+
+<!-- MODAL CONFIRMACIÓN -->
+<div class="modal-bg" id="modal-confirm" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <h3 id="modal-title">Confirmar Voto</h3>
+    <p>Revise sus selecciones. Una vez confirmado, <strong>no podrá modificar su voto</strong>.</p>
+    <div class="modal-resumen" id="modal-resumen"></div>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="submitVoto()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        Confirmar Voto
+      </button>
+      <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  Club Salvadoreño &nbsp;·&nbsp; Sistema de Votación Electrónica &nbsp;·&nbsp; <span id="foot-year"></span>
+</footer>
+
+<script>
+'use strict';
+
+// ── Estado ─────────────────────────────────────────────────────
+let CFG              = null;
+let socioActual      = null;
+let votosSeleccionados = {}; // { preguntaId: opcionId }
+
+// ── Init ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('foot-year').textContent = new Date().getFullYear();
+  cargarConfig();
+});
+
+async function cargarConfig() {
+  try {
+    if (!window.SUPABASE || window.SUPABASE.URL.includes('TU-PROYECTO')) {
+      throw new Error('Configure SUPABASE.URL y ANON_KEY en supabase-config.js.');
+    }
+    const data = await fetchAPI('config');
+    if (data.error) throw new Error(data.error);
+    // Normalizar al modelo interno { eleccion, preguntas }
+    CFG = {
+      eleccion: {
+        titulo: data.titulo,
+        descripcion: data.descripcion,
+        modoDemo: data.modoDemo,
+        validarPadron: data.validarPadron,
+      },
+      preguntas: data.preguntas || [],
+    };
+    aplicarConfig();
+  } catch (e) {
+    mostrarScreen('s-error');
+    set('err-titulo', 'Error de Configuración');
+    set('err-msg', 'No se pudo cargar la configuración. ' + e.message);
+  }
+}
+
+function aplicarConfig() {
+  const el = CFG.eleccion || CFG.election || {};
+  const titulo = el.titulo || el.title || 'Elecciones';
+
+  document.title = titulo + ' – Club Salvadoreño';
+  set('hdr-title', titulo);
+  set('inicio-sub', el.descripcion || el.description ||
+    'Ingrese su número de socio para acceder al proceso de votación.');
+  set('votacion-sub', el.descripcion || el.description || '');
+
+  if (el.modoDemo || el.demoMode) {
+    document.getElementById('demo-banner').classList.remove('hidden');
+  }
+
+  renderPreguntas();
+  mostrarScreen('s-inicio');
+
+  // ── Socio por URL (?socio=12345 o #socio=12345) ──────────────
+  const urlSocio = _socioDeURL();
+  if (urlSocio) {
+    document.getElementById('inp-socio').value = urlSocio;
+    verificarSocio(); // auto-continúa
+  } else {
+    document.getElementById('inp-socio').focus();
+  }
+}
+
+/** Lee ?uid=X de query string o hash */
+function _socioDeURL() {
+  const qs   = new URLSearchParams(window.location.search).get('uid');
+  if (qs && /^[a-zA-Z0-9]+$/.test(qs.trim())) return qs.trim();
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('uid');
+  if (hash && /^[a-zA-Z0-9]+$/.test(hash.trim())) return hash.trim();
+  return null;
+}
+
+// ── Screens ────────────────────────────────────────────────────
+function mostrarScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('active'); window.scrollTo(0, 0); }
+}
+
+// ── Verificar socio ────────────────────────────────────────────
+async function verificarSocio() {
+  const inp   = document.getElementById('inp-socio');
+  const errEl = document.getElementById('socio-err');
+  const socio = inp.value.trim();
+
+  if (!socio || !/^[a-zA-Z0-9]+$/.test(socio)) {
+    inp.classList.add('inp-err');
+    errEl.textContent = 'Ingrese un identificador único válido (letras y números).';
+    errEl.style.display = 'block';
+    inp.focus();
+    return;
+  }
+  inp.classList.remove('inp-err');
+  errEl.style.display = 'none';
+
+  const el = CFG.eleccion || CFG.election || {};
+
+  if (el.modoDemo || el.demoMode) {
+    socioActual = socio;
+    mostrarScreen('s-votacion');
+    return;
+  }
+
+  mostrarScreen('s-verificando');
+  try {
+    const res = await fetchAPI('check', { uid: socio });
+    if (res.alreadyVoted) {
+      mostrarScreen('s-ya-voto');
+    } else if (res.valid === false) {
+      mostrarScreen('s-error');
+      set('err-titulo', 'Identificador inválido');
+      set('err-msg', res.message || 'El identificador no está registrado en el padrón.');
+    } else {
+      socioActual = socio;
+      mostrarScreen('s-votacion');
+    }
+  } catch (e) {
+    mostrarScreen('s-error');
+    set('err-msg', 'Error al verificar: ' + e.message);
+  }
+}
+
+// ── Render preguntas ───────────────────────────────────────────
+function renderPreguntas() {
+  const preguntas = CFG.preguntas || [];
+  const container = document.getElementById('preguntas-container');
+  container.innerHTML = '';
+
+  preguntas.forEach((p, idx) => {
+    const pid    = p.id;
+    const bloque = document.createElement('div');
+    bloque.className = 'pregunta-block';
+
+    const opcionesHtml = (p.opciones || []).map(op => {
+      const oid = op.id;
+      // Render especial para planilla con capitán destacado
+      let infoExtra = '';
+      if (op.capitan || (op.miembros && op.miembros.length)) {
+        const miembrosHtml = (op.miembros || [])
+          .map(m => {
+            const nombre = (m && typeof m === 'object') ? m.nombre : m;
+            const cargo  = (m && typeof m === 'object') ? m.cargo  : null;
+            return `<div class="op-cap-miembro">${esc(nombre)}${
+              cargo ? ` <span class="op-cap-cargo">· ${esc(cargo)}</span>` : ''}</div>`;
+          })
+          .join('');
+        const capHtml = op.capitan ? `
+          <div class="op-cap-row">
+            <span class="op-cap-nombre">${esc(op.capitan.nombre)}</span>
+            ${op.capitan.cargo ? `<span class="op-cap-badge">${esc(op.capitan.cargo)}</span>` : ''}
+          </div>` : '';
+        infoExtra = `${capHtml}${miembrosHtml ? `<div class="op-cap-miembros">${miembrosHtml}</div>` : ''}`;
+      } else if (op.descripcion) {
+        infoExtra = `<div class="op-desc">${esc(op.descripcion)}</div>`;
+      }
+      return `
+        <div class="opcion-card" data-pid="${esc(pid)}" data-oid="${esc(oid)}"
+             role="radio" aria-checked="false" tabindex="0"
+             onclick="seleccionar('${esc(pid)}','${esc(oid)}')"
+             onkeydown="if(event.key===' '||event.key==='Enter')seleccionar('${esc(pid)}','${esc(oid)}')">
+          <div class="op-radio" aria-hidden="true"></div>
+          <div class="op-color" style="background:${esc(op.color||'#1E656D')}" aria-hidden="true"></div>
+          <div class="op-info">
+            <div class="op-nombre">${esc(op.nombre || op.name)}</div>
+            ${infoExtra}
+          </div>
+        </div>`;
+    }).join('');
+
+    bloque.innerHTML = `
+      <div class="pregunta-num">
+        <span class="pregunta-num-badge">${idx + 1}</span>
+        Pregunta ${idx + 1} de ${preguntas.length}
+      </div>
+      <div class="pregunta-titulo">${esc(p.titulo)}</div>
+      ${p.descripcion ? `<div class="pregunta-desc">${esc(p.descripcion)}</div>` : ''}
+      <div class="opciones" role="radiogroup" aria-label="${esc(p.titulo)}">${opcionesHtml}</div>
+    `;
+    container.appendChild(bloque);
+  });
+
+  // Auto-seleccionar si una pregunta tiene una sola opción
+  preguntas.forEach(p => {
+    if ((p.opciones || []).length === 1) {
+      seleccionar(p.id, p.opciones[0].id);
+    }
+  });
+}
+
+function seleccionar(pid, oid) {
+  votosSeleccionados[pid] = oid;
+  // Actualizar estado visual solo para las opciones de esta pregunta
+  document.querySelectorAll(`.opcion-card[data-pid="${pid}"]`).forEach(c => {
+    const sel = c.dataset.oid === oid;
+    c.classList.toggle('selected', sel);
+    c.setAttribute('aria-checked', sel ? 'true' : 'false');
+  });
+  document.getElementById('vot-err').classList.add('hidden');
+}
+
+// ── Confirmar ─────────────────────────────────────────────────
+function confirmarVoto() {
+  const preguntas = CFG.preguntas || [];
+  const sinResponder = preguntas.filter(p => !votosSeleccionados[p.id]);
+
+  if (sinResponder.length > 0) {
+    const errEl = document.getElementById('vot-err');
+    const txt   = document.getElementById('vot-err-txt');
+    txt.textContent = sinResponder.length === 1
+      ? `Por favor responda la pregunta: "${sinResponder[0].titulo}".`
+      : `Por favor responda todas las ${preguntas.length} preguntas antes de continuar.`;
+    errEl.classList.remove('hidden');
+    // Scroll al primer bloque sin responder
+    const primero = document.querySelector(`.opcion-card[data-pid="${sinResponder[0].id}"]`);
+    if (primero) primero.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  // Construir resumen en el modal
+  const resumenEl = document.getElementById('modal-resumen');
+  resumenEl.innerHTML = preguntas.map(p => {
+    const oid   = votosSeleccionados[p.id];
+    const opcion = (p.opciones || []).find(o => o.id === oid);
+    const nombre = opcion ? (opcion.nombre || opcion.name) : oid;
+    return `
+      <div class="modal-item">
+        <div class="modal-item-label">${esc(p.titulo)}</div>
+        <div class="modal-item-value">${esc(nombre)}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('modal-confirm').classList.add('open');
+}
+
+function cerrarModal() {
+  document.getElementById('modal-confirm').classList.remove('open');
+}
+
+// ── Enviar voto ────────────────────────────────────────────────
+async function submitVoto() {
+  cerrarModal();
+  mostrarScreen('s-enviando');
+
+  const el = CFG.eleccion || CFG.election || {};
+
+  if (el.modoDemo || el.demoMode) {
+    await sleep(1200);
+    mostrarExito();
+    return;
+  }
+
+  try {
+    const data = await fetchAPI('vote', {
+      uid: socioActual,
+      respuestas: { ...votosSeleccionados },
+    });
+    if (data.error) throw new Error(data.error);
+    mostrarExito();
+  } catch (e) {
+    mostrarScreen('s-error');
+    set('err-msg', 'No se pudo registrar el voto: ' + e.message);
+  }
+}
+
+function mostrarExito() {
+  const preguntas = CFG.preguntas || [];
+  const container = document.getElementById('exito-selecciones');
+
+  container.innerHTML = preguntas.map(p => {
+    const oid    = votosSeleccionados[p.id];
+    const opcion = (p.opciones || []).find(o => o.id === oid);
+    const nombre = opcion ? (opcion.nombre || opcion.name) : oid;
+    return `
+      <div class="voto-resumen-item">
+        <div class="voto-resumen-cat">${esc(p.titulo)}</div>
+        <div class="voto-resumen-val">${esc(nombre)}</div>
+      </div>`;
+  }).join('');
+
+  mostrarScreen('s-exito');
+}
+
+// ── Volver ─────────────────────────────────────────────────────
+function volverInicio() {
+  socioActual        = null;
+  votosSeleccionados = {};
+
+  const inp   = document.getElementById('inp-socio');
+  const errEl = document.getElementById('socio-err');
+  inp.value = '';
+  inp.classList.remove('inp-err');
+  errEl.style.display = 'none';
+
+  document.querySelectorAll('.opcion-card').forEach(c => {
+    c.classList.remove('selected');
+    c.setAttribute('aria-checked', 'false');
+  });
+  document.getElementById('vot-err').classList.add('hidden');
+
+  mostrarScreen('s-inicio');
+  inp.focus();
+}
+
+// ── Utils ──────────────────────────────────────────────────────
+function set(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function fetchAPI(action, payload) {
+  const res = await fetch(`${window.SUPABASE.FUNCTIONS_URL}/api?action=${action}`, {
+    method : 'POST',
+    headers: {
+      'Content-Type' : 'application/json',
+      'Authorization': `Bearer ${window.SUPABASE.ANON_KEY}`,
+      'apikey'       : window.SUPABASE.ANON_KEY,
+    },
+    body: JSON.stringify(payload || {}),
+  });
+  let data;
+  try { data = await res.json(); }
+  catch { throw new Error(`HTTP ${res.status}`); }
+  return data;
+}
+
+// ── Keyboard ───────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const active = document.querySelector('.screen.active');
+  if (!active) return;
+  if (active.id === 's-inicio') verificarSocio();
+});
+
+document.getElementById('modal-confirm').addEventListener('click', e => {
+  if (e.target === e.currentTarget) cerrarModal();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#003563">
+  <title>Resultados – Club Salvadoreño</title>
+  <script src="supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      /* ── Paleta oficial Club Salvadoreño (brand manual) ── */
+      --navy:    #003563;   /* institucional primario  */
+      --navy-mid:#153662;   /* institucional secundario */
+      --blue:    #1E656D;   /* acento Corinto · teal   */
+      --accent:  #659ABC;   /* azul claro institucional */
+      --corinto: #752A07;   /* acento Corinto · vino   */
+      --cream:   #F1F3CE;   /* acento Corinto · crema  */
+      --bg:      #EEF2F7;
+      --surface: #FFFFFF;
+      --border:  #CBD5E1;
+      --text:    #1E293B;
+      --muted:   #64748B;
+      --radius:  12px;
+      --radius-sm:8px;
+      --shadow:  0 4px 20px rgba(0,53,99,.14);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── HEADER ── */
+    .hdr { background: var(--navy); padding: 1.75rem 1.5rem 1.5rem; text-align: center; position: relative; overflow: hidden; }
+    .hdr::before {
+      content: ''; position: absolute; left: -70px; top: -50px; width: 320px; height: 360px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 90' fill='none'%3E%3Cpath d='M40 3 L75 15 V52 C75 73 59 85 40 90 C21 85 5 73 5 52 V15 Z' stroke='white' stroke-width='3' stroke-linejoin='round'/%3E%3Cpolyline points='37,26 18,26 18,64 37,64' stroke='white' stroke-width='6.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M62,26 L43,26 L43,45 L62,45 L62,64 L43,64' stroke='white' stroke-width='6.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-size: contain; opacity: .05; pointer-events: none;
+    }
+    .hdr-inner { position: relative; z-index: 1; }
+    .hdr-logo-row { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: .6rem; }
+    .hdr-logo-img { width: 60px; height: 68px; object-fit: contain; mix-blend-mode: screen; }
+    .hdr-brand h1 { color: #fff; font-family: 'Arial Black', Arial, sans-serif; font-size: clamp(1.05rem,5vw,1.5rem); letter-spacing: .13em; text-transform: uppercase; }
+    .hdr-brand p  { color: rgba(255,255,255,.5); font-size: .76rem; letter-spacing: .07em; text-transform: uppercase; margin-top: .18rem; }
+    .hdr-subtitle { color: rgba(255,255,255,.8); font-size: clamp(.85rem,3vw,1rem); margin-top: .5rem; font-style: italic; }
+    .hdr-bar { height: 4px; background: linear-gradient(90deg,var(--blue) 0%,#1B8EAD 55%,rgba(255,255,255,.15) 100%); }
+
+    /* ── MAIN ── */
+    .main { flex: 1; padding: 2rem 1rem; max-width: 860px; margin: 0 auto; width: 100%; }
+    @media (min-width:600px) { .main { padding: 2.5rem 1.5rem; } }
+
+    /* ── SCREENS ── */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ── PASSWORD ── */
+    .pw-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); max-width: 400px; margin: 0 auto; padding: 2rem 1.75rem; }
+    .pw-icon { width: 58px; height: 58px; border-radius: 50%; background: #EFF6FF; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; }
+    .pw-card h2 { font-family: 'Arial Black', Arial, sans-serif; color: var(--navy); text-align: center; margin-bottom: .4rem; }
+    .pw-card .sub { color: var(--muted); font-size: .88rem; text-align: center; margin-bottom: 1.5rem; line-height: 1.5; }
+    .field { margin-bottom: 1.1rem; }
+    .field label { display: block; font-size: .77rem; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .4rem; }
+    .field input { width: 100%; padding: .8rem 1rem; border: 2px solid var(--border); border-radius: var(--radius-sm); font-size: 1.1rem; color: var(--text); outline: none; text-align: center; letter-spacing: .12em; transition: border-color .2s; }
+    .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(25,118,210,.12); }
+    .field input.inp-err { border-color: #C62828; }
+    .err-msg { font-size: .79rem; color: #C62828; margin-top: .3rem; text-align: center; display: none; }
+    .btn-primary { display: flex; align-items: center; justify-content: center; gap: .45rem; width: 100%; padding: .88rem 1.5rem; background: var(--navy); color: #fff; border: none; border-radius: var(--radius-sm); font-size: .95rem; font-weight: 700; cursor: pointer; transition: background .18s; }
+    .btn-primary:hover { background: var(--navy-mid); }
+
+    /* ── LOADING ── */
+    .loading-wrap { text-align: center; padding: 3rem 1rem; }
+    .spinner { width: 50px; height: 50px; border: 4px solid var(--border); border-top-color: var(--navy); border-radius: 50%; animation: spin .75s linear infinite; margin: 0 auto 1.25rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-wrap p { color: var(--muted); }
+
+    /* ── ERROR ── */
+    .alert-err { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; border-radius: var(--radius-sm); padding: .85rem 1.1rem; font-size: .88rem; margin-bottom: .75rem; }
+    .btn-retry { display: inline-flex; align-items: center; gap: .4rem; padding: .65rem 1.2rem; background: var(--navy); color: #fff; border: none; border-radius: var(--radius-sm); font-size: .84rem; font-weight: 700; cursor: pointer; }
+
+    /* ── STATS BAR ── */
+    .stats-bar { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 1.75rem; align-items: stretch; }
+    .stat-card { background: var(--surface); border-radius: var(--radius-sm); padding: .9rem 1.25rem; flex: 1; min-width: 120px; box-shadow: var(--shadow); }
+    .stat-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: .25rem; }
+    .stat-value { font-family: 'Arial Black', Arial, sans-serif; font-size: 1.7rem; color: var(--navy); line-height: 1; }
+    .stat-sub   { font-size: .75rem; color: var(--muted); margin-top: .2rem; }
+    .btn-refresh { display: inline-flex; align-items: center; gap: .4rem; padding: .75rem 1.2rem; background: var(--navy); color: #fff; border: none; border-radius: var(--radius-sm); font-size: .84rem; font-weight: 700; cursor: pointer; transition: background .18s; white-space: nowrap; align-self: center; }
+    .btn-refresh:hover { background: var(--navy-mid); }
+    .btn-refresh:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── QUESTION CARD ── */
+    .q-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.75rem; margin-bottom: 1.5rem; }
+    .q-label  { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--blue); margin-bottom: .4rem; }
+    .q-titulo { font-family: 'Arial Black', Arial, sans-serif; font-size: 1.05rem; color: var(--navy); margin-bottom: 1.25rem; }
+
+    /* ── CHART + TABLE ── */
+    .q-body { display: flex; gap: 2rem; align-items: center; flex-wrap: wrap; }
+    .q-chart-wrap { flex: 0 0 200px; max-width: 200px; position: relative; }
+    .q-chart-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; pointer-events: none; }
+    .q-chart-pct { font-family: 'Arial Black', Arial, sans-serif; font-size: 1.6rem; color: var(--navy); line-height: 1; }
+    .q-chart-lbl { font-size: .63rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-top: .1rem; }
+    .q-table-wrap { flex: 1; min-width: 200px; }
+
+    /* ── RESULT ROW ── */
+    .res-row { padding: .65rem 0; border-bottom: 1px solid var(--bg); }
+    .res-row:last-child { border-bottom: none; }
+    .res-top { display: flex; align-items: center; gap: .65rem; margin-bottom: .35rem; }
+    .res-dot  { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .res-nombre { font-weight: 700; font-size: .9rem; color: var(--navy); flex: 1; }
+    .res-count  { font-weight: 700; font-size: .9rem; color: var(--navy); }
+    .res-pct    { font-size: .78rem; color: var(--muted); min-width: 38px; text-align: right; }
+    .res-bar-bg { background: var(--bg); border-radius: 99px; height: 7px; overflow: hidden; }
+    .res-bar    { height: 100%; border-radius: 99px; transition: width .7s ease; }
+    .winner-tag { font-size: .65rem; font-weight: 700; text-transform: uppercase; background: #FBEFE8; border: 1px solid #E3C3B2; color: var(--corinto); border-radius: 99px; padding: .18rem .6rem; white-space: nowrap; }
+
+    /* ── PARTICIPATION BAR ── */
+    .particip-bar { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 2px solid var(--bg); }
+    .particip-label { font-size: .78rem; color: var(--muted); margin-bottom: .4rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: .25rem; }
+    .particip-track { background: var(--bg); border-radius: 99px; height: 10px; overflow: hidden; }
+    .particip-fill  { height: 100%; border-radius: 99px; background: linear-gradient(90deg,var(--navy),var(--blue)); transition: width .8s ease; }
+
+    /* ── REFRESH / NO DATA ── */
+    .refresh-info { text-align: center; font-size: .75rem; color: var(--muted); margin-top: 1rem; }
+    .no-data { text-align: center; padding: 2.5rem 1rem; color: var(--muted); }
+    .no-data svg { margin-bottom: .75rem; opacity: .35; display: block; margin-left: auto; margin-right: auto; }
+
+    /* ── FOOTER ── */
+    .footer { background: var(--navy); color: rgba(255,255,255,.35); text-align: center; padding: .85rem 1rem; font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; margin-top: auto; }
+
+    @media (max-width:480px) {
+      .q-chart-wrap { flex: 0 0 100%; max-width: 180px; margin: 0 auto; }
+      .q-body { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-logo-row">
+      <img src="logo.jpg" class="hdr-logo-img" alt="Club Salvadoreño">
+      <div class="hdr-brand">
+        <h1>Club Salvadoreño</h1>
+        <p>Resultados en tiempo real</p>
+      </div>
+    </div>
+    <p class="hdr-subtitle" id="hdr-title">Elección de Capitán 2026/2027</p>
+  </div>
+</header>
+<div class="hdr-bar"></div>
+
+<main class="main">
+
+  <!-- PASSWORD -->
+  <div id="s-password" class="screen">
+    <div class="pw-card" style="margin-top:1rem;">
+      <div class="pw-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1976D2" stroke-width="2.2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <h2>Área Administrativa</h2>
+      <p class="sub">Ingrese la clave para ver los resultados de la votación.</p>
+      <div class="field">
+        <label for="inp-pw">Clave de acceso</label>
+        <input type="password" id="inp-pw" placeholder="••••••" autocomplete="off">
+        <div class="err-msg" id="pw-err">Clave incorrecta. Intente nuevamente.</div>
+      </div>
+      <button class="btn-primary" onclick="verificarClave()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        Acceder
+      </button>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div id="s-loading" class="screen active">
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <p>Cargando resultados…</p>
+    </div>
+  </div>
+
+  <!-- ERROR -->
+  <div id="s-error" class="screen">
+    <div class="alert-err" id="err-txt">Error al cargar resultados.</div>
+    <button class="btn-retry" onclick="cargarResultados()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Reintentar
+    </button>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="s-results" class="screen">
+
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-label">Votos emitidos</div>
+        <div class="stat-value" id="stat-total">—</div>
+        <div class="stat-sub" id="stat-de-padron"></div>
+      </div>
+      <div class="stat-card" id="stat-pct-card" style="display:none;">
+        <div class="stat-label">Participación</div>
+        <div class="stat-value" id="stat-pct">—</div>
+        <div class="stat-sub" id="stat-pendientes"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Actualizado</div>
+        <div class="stat-value" style="font-size:1rem;padding-top:.3rem;" id="stat-hora">—</div>
+      </div>
+      <button class="btn-refresh" id="btn-refresh" onclick="cargarResultados()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+        Actualizar
+      </button>
+    </div>
+
+    <div id="questions-container"></div>
+    <p class="refresh-info" id="refresh-countdown"></p>
+
+  </div>
+
+</main>
+
+<footer class="footer">
+  Club Salvadoreño &nbsp;·&nbsp; Resultados Electorales &nbsp;·&nbsp; Capitán 2026/2027
+</footer>
+
+<script>
+'use strict';
+
+let CFG = null;
+let colorMap = {};
+let adminPw = '';            // clave para resultados cuando no son públicos
+let countdownTimer = null;
+let nextRefresh = 0;
+const REFRESH_SEC = 60;
+window._charts = [];
+
+document.addEventListener('DOMContentLoaded', init);
+
+async function init() {
+  try {
+    if (!window.SUPABASE || window.SUPABASE.URL.includes('TU-PROYECTO')) {
+      throw new Error('Configure SUPABASE.URL y ANON_KEY en supabase-config.js.');
+    }
+    const cfg = await fetchAPI('config');
+    if (cfg.error) throw new Error(cfg.error);
+    CFG = cfg;
+
+    document.title = (cfg.titulo || 'Resultados') + ' – Club Salvadoreño';
+    set('hdr-title', cfg.titulo || 'Resultados');
+
+    (cfg.preguntas || []).forEach(p =>
+      (p.opciones || []).forEach(op => { colorMap[op.id] = op.color || '#1E656D'; })
+    );
+
+    // Si los resultados son públicos, cargar directo; si no, pedir clave.
+    const inp = document.getElementById('inp-pw');
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') verificarClave(); });
+    await cargarResultados();
+  } catch (e) {
+    mostrarScreen('s-error');
+    set('err-txt', 'Error al cargar configuración: ' + e.message);
+  }
+}
+
+function verificarClave() {
+  const inp = document.getElementById('inp-pw');
+  const err = document.getElementById('pw-err');
+  adminPw = inp.value;
+  err.style.display = 'none';
+  inp.classList.remove('inp-err');
+  mostrarScreen('s-loading');
+  cargarResultados();
+}
+
+async function cargarResultados() {
+  clearInterval(countdownTimer);
+  const enResultados = document.getElementById('s-results').classList.contains('active');
+  if (!enResultados) mostrarScreen('s-loading');
+  document.getElementById('btn-refresh').disabled = true;
+
+  try {
+    const data = await fetchAPI('results', null, adminPw);
+    if (data.locked) {           // resultados no públicos → pedir/validar clave
+      mostrarScreen('s-password');
+      const inp = document.getElementById('inp-pw');
+      if (adminPw) {             // ya intentó con clave → fue incorrecta
+        document.getElementById('pw-err').style.display = 'block';
+        inp.classList.add('inp-err');
+        inp.value = '';
+      }
+      inp.focus();
+      return;
+    }
+    if (data.error) throw new Error(data.error);
+    renderResultados(data);
+    mostrarScreen('s-results');
+    iniciarCountdown();
+  } catch (e) {
+    if (!document.getElementById('s-results').classList.contains('active')) {
+      mostrarScreen('s-error');
+      set('err-txt', 'Error al obtener resultados: ' + e.message);
+    }
+  } finally {
+    document.getElementById('btn-refresh').disabled = false;
+  }
+}
+
+async function fetchAPI(action, payload, pw) {
+  const headers = {
+    'Content-Type' : 'application/json',
+    'Authorization': `Bearer ${window.SUPABASE.ANON_KEY}`,
+    'apikey'       : window.SUPABASE.ANON_KEY,
+  };
+  if (pw) headers['X-Admin-Password'] = pw;
+  const res = await fetch(`${window.SUPABASE.FUNCTIONS_URL}/api?action=${action}`, {
+    method: 'POST', headers, body: JSON.stringify(payload || {}),
+  });
+  try { return await res.json(); }
+  catch { throw new Error('HTTP ' + res.status); }
+}
+
+function iniciarCountdown() {
+  clearInterval(countdownTimer);
+  nextRefresh = REFRESH_SEC;
+  countdownTimer = setInterval(() => {
+    nextRefresh--;
+    const el = document.getElementById('refresh-countdown');
+    if (el) el.textContent = 'Actualización automática en ' + nextRefresh + 's';
+    if (nextRefresh <= 0) { clearInterval(countdownTimer); cargarResultados(); }
+  }, 1000);
+}
+
+function renderResultados(data) {
+  const { preguntas, totalVotos, totalPadron } = data;
+
+  set('stat-total', totalVotos || 0);
+  set('stat-hora',  new Date().toLocaleTimeString('es-SV'));
+
+  if (totalPadron > 0) {
+    const pct  = Math.round((totalVotos / totalPadron) * 100);
+    const pend = totalPadron - totalVotos;
+    document.getElementById('stat-pct-card').style.display = '';
+    set('stat-pct',        pct + '%');
+    set('stat-de-padron',  'de ' + totalPadron + ' votantes');
+    set('stat-pendientes', pend + ' pendiente' + (pend !== 1 ? 's' : ''));
+  } else {
+    set('stat-de-padron', 'votos emitidos');
+  }
+
+  window._charts.forEach(c => c.destroy());
+  window._charts = [];
+
+  const container = document.getElementById('questions-container');
+  container.innerHTML = '';
+
+  if (!preguntas || preguntas.length === 0 || totalVotos === 0) {
+    container.innerHTML = `
+      <div class="no-data">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <p style="font-size:.95rem;font-weight:700;color:var(--navy);margin-bottom:.3rem;">Sin votos registrados aún</p>
+        <p style="font-size:.84rem;">Los resultados aparecerán en cuanto se emita el primer voto.</p>
+      </div>`;
+    return;
+  }
+
+  const cfgPregMap = {};
+  (CFG.preguntas || []).forEach(p => {
+    const m = {};
+    (p.opciones || []).forEach(op => { m[op.id] = op.color || '#1E656D'; });
+    cfgPregMap[p.id] = m;
+  });
+
+  preguntas.forEach((preg, idx) => {
+    const canvasId  = 'chart-' + idx;
+    const opColores = cfgPregMap[preg.id] || {};
+    const esUnica   = preg.opciones.length === 1 && totalPadron > 0;
+    const pendientes = totalPadron - totalVotos;
+
+    // Datos del gráfico
+    let chartLabels, chartData, chartColors;
+    if (esUnica) {
+      chartLabels = ['Votos emitidos', 'Pendientes'];
+      chartData   = [totalVotos, Math.max(pendientes, 0)];
+      chartColors = ['#003563', '#E2E8F0'];
+    } else {
+      chartLabels = preg.opciones.map(o => o.nombre);
+      chartData   = preg.opciones.map(o => o.votos);
+      chartColors = preg.opciones.map(o => opColores[o.id] || '#1E656D');
+    }
+
+    const pctCenter = esUnica && totalPadron > 0
+      ? Math.round((totalVotos / totalPadron) * 100) + '%'
+      : (preg.opciones[0] ? preg.opciones[0].porcentaje + '%' : '');
+    const lblCenter = esUnica ? 'participación' : 'líder';
+
+    // Filas de tabla
+    const tableHtml = preg.opciones.map((op, i) => {
+      const color    = opColores[op.id] || '#1E656D';
+      const esLider  = i === 0 && preg.opciones.length > 1 && op.votos > 0;
+      return `
+        <div class="res-row">
+          <div class="res-top">
+            <div class="res-dot" style="background:${color}"></div>
+            <span class="res-nombre">${esc(op.nombre)}</span>
+            <span class="res-count">${op.votos}</span>
+            <span class="res-pct">${op.porcentaje}%</span>
+            ${esLider ? '<span class="winner-tag">★ Líder</span>' : ''}
+          </div>
+          <div class="res-bar-bg">
+            <div class="res-bar" style="width:${op.porcentaje}%;background:${color};"></div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Barra de participación
+    const participBarHtml = totalPadron > 0 ? (() => {
+      const pct  = Math.round((totalVotos / totalPadron) * 100);
+      const pend = totalPadron - totalVotos;
+      return `
+        <div class="particip-bar">
+          <div class="particip-label">
+            <span>Participación general</span>
+            <span>${totalVotos} de ${totalPadron} — ${pend} pendiente${pend !== 1 ? 's' : ''}</span>
+          </div>
+          <div class="particip-track">
+            <div class="particip-fill" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+    })() : '';
+
+    const card = document.createElement('div');
+    card.className = 'q-card';
+    card.innerHTML = `
+      <div class="q-label">Pregunta ${idx + 1} de ${preguntas.length}</div>
+      <div class="q-titulo">${esc(preg.titulo)}</div>
+      <div class="q-body">
+        <div class="q-chart-wrap">
+          <canvas id="${canvasId}" width="200" height="200"></canvas>
+          <div class="q-chart-center">
+            <div class="q-chart-pct">${pctCenter}</div>
+            <div class="q-chart-lbl">${lblCenter}</div>
+          </div>
+        </div>
+        <div class="q-table-wrap">
+          ${tableHtml}
+          ${participBarHtml}
+        </div>
+      </div>`;
+
+    container.appendChild(card);
+
+    const chart = new Chart(document.getElementById(canvasId).getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: chartLabels,
+        datasets: [{
+          data: chartData, backgroundColor: chartColors,
+          borderColor: '#ffffff', borderWidth: 3, hoverOffset: 5,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true, cutout: '65%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ' ' + ctx.label + ': ' + ctx.raw } }
+        },
+        animation: { duration: 700 }
+      }
+    });
+    window._charts.push(chart);
+  });
+}
+
+function mostrarScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
