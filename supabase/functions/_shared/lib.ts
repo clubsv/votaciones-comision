@@ -93,7 +93,9 @@ export function esc(str: unknown): string {
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-// Envía la notificación por cada voto vía Resend (replica el email de Apps Script).
+// Envía la notificación por cada voto vía Brevo (HTTP API). Con "single sender"
+// verificado no requiere verificar dominio y entrega a cualquier destinatario,
+// renderizando el HTML correctamente (a diferencia de SMTP crudo desde la Edge Function).
 export async function sendVoteEmail(opts: {
   settings: Settings;
   uid: string;
@@ -102,10 +104,13 @@ export async function sendVoteEmail(opts: {
   resultados: Awaited<ReturnType<typeof computeResults>>;
   fechaHora: string;
 }) {
-  const apiKey = Deno.env.get("RESEND_API_KEY");
-  const from = Deno.env.get("EMAIL_FROM");
+  const apiKey = Deno.env.get("BREVO_API_KEY");
   const to = (opts.settings.emails_notificacion ?? []).filter((e) => e && e.trim());
-  if (!apiKey || !from || to.length === 0) return; // email opcional: no romper el voto
+  if (!apiKey || to.length === 0) return; // email opcional: no romper el voto
+
+  // Remitente: debe ser un "sender" verificado en Brevo.
+  const senderEmail = Deno.env.get("EMAIL_FROM_ADDRESS") ?? "eleccionescapitancs@gmail.com";
+  const senderName = Deno.env.get("EMAIL_FROM_NAME") ?? "Club Salvadoreño · Votaciones";
 
   const { totalVotos, totalPadron } = opts.resultados;
   const pct = totalPadron > 0 ? Math.round((totalVotos / totalPadron) * 100) : null;
@@ -160,12 +165,21 @@ export async function sendVoteEmail(opts: {
   <tr><td style="background:#0D2137;border-radius:0 0 10px 10px;padding:14px 24px;text-align:center;"><div style="color:rgba(255,255,255,.4);font-size:11px;">Mensaje automático · Club Salvadoreño · Sistema de Votación</div></td></tr>
 </table></td></tr></table></body></html>`;
 
-  const res = await fetch("https://api.resend.com/emails", {
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to, subject: opts.settings.email_asunto, html }),
+    headers: {
+      "api-key": apiKey,
+      "accept": "application/json",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      sender: { name: senderName, email: senderEmail },
+      to: to.map((email) => ({ email })),
+      subject: opts.settings.email_asunto,
+      htmlContent: html,
+    }),
   });
   if (!res.ok) {
-    console.error("[Resend] Error:", res.status, await res.text());
+    console.error("[Brevo] Error:", res.status, await res.text());
   }
 }

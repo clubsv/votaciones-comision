@@ -1,6 +1,6 @@
 # Sistema de Votación Electrónica — Club Salvadoreño
 
-Aplicación web estática (GitHub Pages) con backend en **Supabase** (Postgres + Edge Functions) y notificación por correo vía **Resend**. Incluye un **panel administrativo** para configurar la elección, las planillas, el padrón y los correos.
+Aplicación web estática (GitHub Pages) con backend en **Supabase** (Postgres + Edge Functions) y notificación por correo vía **Brevo**. Incluye un **panel administrativo** para configurar la elección, las planillas, el padrón y los correos.
 
 Identidad visual basada en el *brand manual* del club: colores institucionales (navy `#003563` / `#153662`, azul `#659ABC`) con acentos **Corinto** (teal `#1E656D`, vino `#752A07`, crema `#F1F3CE`).
 
@@ -21,7 +21,7 @@ Supabase Edge Functions (Deno, service_role por dentro)
   └── admin  → CRUD protegido por X-Admin-Password
         │
         ├── Postgres (RLS deny-all: el frontend NO toca tablas directamente)
-        └── Resend (email por cada voto)
+        └── Brevo (email por cada voto)
 ```
 
 **Seguridad:** las tablas tienen RLS sin políticas para `anon` → el anon key **no** da acceso a datos; solo permite invocar funciones. La clave administrativa se valida **dentro de la Edge Function** (servidor), nunca en el navegador.
@@ -69,16 +69,18 @@ supabase functions deploy api   --no-verify-jwt
 supabase functions deploy admin --no-verify-jwt
 
 supabase secrets set ADMIN_PASSWORD="una-clave-fuerte"
-supabase secrets set RESEND_API_KEY="re_xxxxxxxx"
-supabase secrets set EMAIL_FROM="Votaciones Club <votaciones@clubsalvadoreno.com>"
+supabase secrets set BREVO_API_KEY="xkeysib-xxxxxxxx"
+supabase secrets set EMAIL_FROM_ADDRESS="remitente@verificado-en-brevo.com"  # "single sender" verificado
+supabase secrets set EMAIL_FROM_NAME="Club Salvadoreño · Votaciones"
 ```
 > `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` ya están disponibles dentro de las funciones; no se configuran manualmente.
 
-### 4. Resend (correo)
-1. Crear cuenta en [resend.com](https://resend.com) y obtener un API key.
-2. **Verificar el dominio** `clubsalvadoreno.com` (registros SPF/DKIM en el DNS) para enviar desde una dirección del club.
-   - *Fallback inicial:* mientras se verifica el dominio, usar el remitente de prueba `onboarding@resend.dev` en `EMAIL_FROM`.
-3. Si no se configura `RESEND_API_KEY`/`EMAIL_FROM`, el voto se registra igual pero **no** se envía correo.
+### 4. Brevo (correo)
+1. Crear cuenta gratis en [brevo.com](https://www.brevo.com) y obtener un API key (`xkeysib-...`).
+2. **Verificar el remitente** (*single sender*): Settings → Senders → *Add a sender* → confirmar con el clic del correo de verificación. **No requiere DNS** y permite enviar a cualquier destinatario.
+   - *Mejor entrega (opcional):* para quitar el aviso de DKIM/DMARC de Brevo y maximizar la entrega, autenticar un dominio propio en Brevo cuando se tenga acceso al DNS.
+3. Si no se configura `BREVO_API_KEY`, el voto se registra igual pero **no** se envía correo.
+4. La **lista de destinatarios** (quién recibe la notificación) se gestiona en el panel admin → pestaña *Correos*.
 
 ### 5. Frontend (`supabase-config.js`)
 Editar con los valores del proyecto (Dashboard → Project Settings → API):
@@ -139,4 +141,5 @@ supabase start                         # Postgres + funciones locales
 supabase functions serve api admin --no-verify-jwt --env-file ./supabase/.env.local
 ```
 Servir el frontend con cualquier servidor estático (ej. `npx serve .`) apuntando `supabase-config.js` a la URL local.
-wBF9k4obKeyqJm6y
+
+
